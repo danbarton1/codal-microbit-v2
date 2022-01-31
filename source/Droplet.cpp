@@ -2,33 +2,34 @@
 The MIT License (MIT)
 
 Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+    This software is provided by Lancaster University by arrangement with the BBC.
 
-Permission is hereby granted, free of charge, to any person obtaining a
-copy of this software and associated documentation files (the "Software"),
-to deal in the Software without restriction, including without limitation
-the rights to use, copy, modify, merge, publish, distribute, sublicense,
-and/or sell copies of the Software, and to permit persons to whom the
-Software is furnished to do so, subject to the following conditions:
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+                                          Software is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-DEALINGS IN THE SOFTWARE.
-*/
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+        DEALINGS IN THE SOFTWARE.
+            */
 
-#include "MicroBitRadio.h"
+#include "Droplet.h"
 #include "MicroBitDevice.h"
 #include "CodalComponent.h"
 #include "ErrorNo.h"
 #include "CodalFiber.h"
 #include "nrf.h"
+#include "DropletEvent.h"
 
 using namespace codal;
 
@@ -55,13 +56,13 @@ const uint8_t MICROBIT_RADIO_POWER_LEVEL[] = {0xD8, 0xD8, 0xEC, 0xF0, 0xF4, 0xF8
   * NOTE: This API does not contain any form of encryption, authentication or authorisation. Its purpose is solely for use as a
   * teaching aid to demonstrate how simple communications operates, and to provide a sandpit through which learning can take place.
   * For serious applications, BLE should be considered a substantially more secure alternative.
-  */
+ */
 
-MicroBitRadio* MicroBitRadio::instance = NULL;
+Droplet* Droplet::instance = NULL;
 
-/*
 extern "C" void RADIO_IRQHandler(void)
 {
+    DMESG("RADIO_IRQHandler");
     if(NRF_RADIO->EVENTS_READY)
     {
         NRF_RADIO->EVENTS_READY = 0;
@@ -79,24 +80,26 @@ extern "C" void RADIO_IRQHandler(void)
 
             // Associate this packet's rssi value with the data just
             // transferred by DMA receive
-            MicroBitRadio::instance->setRSSI(-sample);
+            Droplet::instance->setRSSI(-sample);
 
             // Now move on to the next buffer, if possible.
             // The queued packet will get the rssi value set above.
-            MicroBitRadio::instance->queueRxBuf();
+            Droplet::instance->queueRxBuf();
 
+            DropletFrameBuffer *buffer = Droplet::instance->getRxBuf();
+            DMESG("RADIO_IRQHandler Protocol %d", buffer->protocol);
             // Set the new buffer for DMA
-            NRF_RADIO->PACKETPTR = (uint32_t) MicroBitRadio::instance->getRxBuf();
+            NRF_RADIO->PACKETPTR = (uint32_t) Droplet::instance->getRxBuf();
         }
         else
         {
-            MicroBitRadio::instance->setRSSI(0);
+            Droplet::instance->setRSSI(0);
         }
 
         // Start listening and wait for the END event
         NRF_RADIO->TASKS_START = 1;
     }
-} */
+} 
 
 /**
   * Constructor.
@@ -105,16 +108,16 @@ extern "C" void RADIO_IRQHandler(void)
   *
   * @note This class is demand activated, as a result most resources are only
   *       committed if send/recv or event registrations calls are made.
-  */
-MicroBitRadio::MicroBitRadio(uint16_t id) : datagram(*this), event (*this)
+ */
+Droplet::Droplet(uint16_t id) : datagram(*this), event (*this)
 {
     this->id = id;
     this->status = 0;
-	this->group = MICROBIT_RADIO_DEFAULT_GROUP;
-	this->queueDepth = 0;
+    this->group = MICROBIT_RADIO_DEFAULT_GROUP;
+    this->queueDepth = 0;
     this->rssi = 0;
-    this->rxQueue = NULL;
-    this->rxBuf = NULL;
+    this->rxQueue = nullptr;
+    this->rxBuf = nullptr;
 
     instance = this;
 }
@@ -125,8 +128,8 @@ MicroBitRadio::MicroBitRadio(uint16_t id) : datagram(*this), event (*this)
   * @param power a value in the range 0..7, where 0 is the lowest power and 7 is the highest.
   *
   * @return DEVICE_OK on success, or DEVICE_INVALID_PARAMETER if the value is out of range.
-  */
-int MicroBitRadio::setTransmitPower(int power)
+ */
+int Droplet::setTransmitPower(int power)
 {
     if (power < 0 || power >= MICROBIT_RADIO_POWER_LEVELS)
         return DEVICE_INVALID_PARAMETER;
@@ -143,8 +146,8 @@ int MicroBitRadio::setTransmitPower(int power)
   *
   * @return DEVICE_OK on success, or DEVICE_INVALID_PARAMETER if the value is out of range,
   *         or DEVICE_NOT_SUPPORTED if the BLE stack is running.
-  */
-int MicroBitRadio::setFrequencyBand(int band)
+ */
+int Droplet::setFrequencyBand(int band)
 {
     if (ble_running())
         return DEVICE_NOT_SUPPORTED;
@@ -162,8 +165,8 @@ int MicroBitRadio::setFrequencyBand(int band)
   * actively being used by the radio hardware to store incoming data.
   *
   * @return a pointer to the current receive buffer.
-  */
-FrameBuffer* MicroBitRadio::getRxBuf()
+ */
+DropletFrameBuffer* Droplet::getRxBuf()
 {
     return rxBuf;
 }
@@ -173,8 +176,8 @@ FrameBuffer* MicroBitRadio::getRxBuf()
   *
   * @return DEVICE_OK on success, or DEVICE_NO_RESOURCES if a replacement receiver buffer
   *         could not be allocated (either by policy or memory exhaustion).
-  */
-int MicroBitRadio::queueRxBuf()
+ */
+int Droplet::queueRxBuf()
 {
     if (rxBuf == NULL)
         return DEVICE_INVALID_PARAMETER;
@@ -186,7 +189,7 @@ int MicroBitRadio::queueRxBuf()
     rxBuf->rssi = getRSSI();
 
     // Ensure that a replacement buffer is available before queuing.
-    FrameBuffer *newRxBuf = new FrameBuffer();
+    DropletFrameBuffer *newRxBuf = new DropletFrameBuffer();
 
     if (newRxBuf == NULL)
         return DEVICE_NO_RESOURCES;
@@ -200,7 +203,7 @@ int MicroBitRadio::queueRxBuf()
     }
     else
     {
-        FrameBuffer *p = rxQueue;
+        DropletFrameBuffer *p = rxQueue;
         while (p->next != NULL)
             p = p->next;
 
@@ -224,8 +227,8 @@ int MicroBitRadio::queueRxBuf()
   * @param rssi the new rssi value.
   *
   * @note should only be called from RADIO_IRQHandler...
-  */
-int MicroBitRadio::setRSSI(int rssi)
+ */
+int Droplet::setRSSI(int rssi)
 {
     if (!(status & MICROBIT_RADIO_STATUS_INITIALISED))
         return DEVICE_NOT_SUPPORTED;
@@ -241,8 +244,8 @@ int MicroBitRadio::setRSSI(int rssi)
   * Typical values are in the range -42 to -128.
   *
   * @return the most recent RSSI value or DEVICE_NOT_SUPPORTED if the BLE stack is running.
-  */
-int MicroBitRadio::getRSSI()
+ */
+int Droplet::getRSSI()
 {
     if (!(status & MICROBIT_RADIO_STATUS_INITIALISED))
         return DEVICE_NOT_SUPPORTED;
@@ -254,8 +257,8 @@ int MicroBitRadio::getRSSI()
   * Initialises the radio for use as a multipoint sender/receiver
   *
   * @return DEVICE_OK on success, DEVICE_NOT_SUPPORTED if the BLE stack is running.
-  */
-int MicroBitRadio::enable()
+ */
+int Droplet::enable()
 {
     // If the device is already initialised, then there's nothing to do.
     if (status & MICROBIT_RADIO_STATUS_INITIALISED)
@@ -267,7 +270,7 @@ int MicroBitRadio::enable()
 
     // If this is the first time we've been enable, allocate out receive buffers.
     if (rxBuf == NULL)
-        rxBuf = new FrameBuffer();
+        rxBuf = new DropletFrameBuffer();
 
     if (rxBuf == NULL)
         return DEVICE_NO_RESOURCES;
@@ -305,7 +308,7 @@ int MicroBitRadio::enable()
     // and reception of data, also contains a LENGTH field, two optional additional 1 byte fields (S0 and S1) and a CRC calculation.
     // Configure the packet format for a simple 8 bit length field and no additional fields.
     NRF_RADIO->PCNF0 = 0x00000008;
-    NRF_RADIO->PCNF1 = 0x02040000 | MICROBIT_RADIO_MAX_PACKET_SIZE;
+    NRF_RADIO->PCNF1 = 0x02040000 | MICROBIT_DROPLET_MAX_PACKET_SIZE;
 
     // Most communication channels contain some form of checksum - a mathematical calculation taken based on all the data
     // in a packet, that is also sent as part of the packet. When received, this calculation can be repeated, and the results
@@ -351,8 +354,8 @@ int MicroBitRadio::enable()
   * Disables the radio for use as a multipoint sender/receiver.
   *
   * @return DEVICE_OK on success, DEVICE_NOT_SUPPORTED if the BLE stack is running.
-  */
-int MicroBitRadio::disable()
+ */
+int Droplet::disable()
 {
     // Only attempt to enable.disable the radio if the protocol is alreayd running.
     if (ble_running())
@@ -383,8 +386,8 @@ int MicroBitRadio::disable()
   * @param group The group to join. A micro:bit can only listen to one group ID at any time.
   *
   * @return DEVICE_OK on success, or DEVICE_NOT_SUPPORTED if the BLE stack is running.
-  */
-int MicroBitRadio::setGroup(uint8_t group)
+ */
+int Droplet::setGroup(uint8_t group)
 {
     if (ble_running())
         return DEVICE_NOT_SUPPORTED;
@@ -401,13 +404,15 @@ int MicroBitRadio::setGroup(uint8_t group)
 /**
   * A background, low priority callback that is triggered whenever the processor is idle.
   * Here, we empty our queue of received packets, and pass them onto higher level protocol handlers.
-  */
-void MicroBitRadio::idleCallback()
+ */
+void Droplet::idleCallback()
 {
     // Walk the list of packets and process each one.
     while(rxQueue)
     {
-        FrameBuffer *p = rxQueue;
+        DropletFrameBuffer *p = rxQueue;
+
+        DMESG("%d", p->protocol);
 
         switch (p->protocol)
         {
@@ -437,8 +442,8 @@ void MicroBitRadio::idleCallback()
   * Determines the number of packets ready to be processed.
   *
   * @return The number of packets in the receive buffer.
-  */
-int MicroBitRadio::dataReady()
+ */
+int Droplet::dataReady()
 {
     return queueDepth;
 }
@@ -452,14 +457,14 @@ int MicroBitRadio::dataReady()
   *
   * @note Once recv() has been called, it is the callers responsibility to
   *       delete the buffer when appropriate.
-  */
-FrameBuffer* MicroBitRadio::recv()
+ */
+DropletFrameBuffer* Droplet::recv()
 {
-    FrameBuffer *p = rxQueue;
+    DropletFrameBuffer *p = rxQueue;
 
     if (p)
     {
-         // Protect shared resource from ISR activity
+        // Protect shared resource from ISR activity
         NVIC_DisableIRQ(RADIO_IRQn);
 
         rxQueue = rxQueue->next;
@@ -479,8 +484,8 @@ FrameBuffer* MicroBitRadio::recv()
   * @param data The packet contents to transmit.
   *
   * @return DEVICE_OK on success, or DEVICE_NOT_SUPPORTED if the BLE stack is running.
-  */
-int MicroBitRadio::send(FrameBuffer *buffer)
+ */
+int Droplet::send(DropletFrameBuffer *buffer)
 {
     if (ble_running())
         return DEVICE_NOT_SUPPORTED;
@@ -488,8 +493,10 @@ int MicroBitRadio::send(FrameBuffer *buffer)
     if (buffer == NULL)
         return DEVICE_INVALID_PARAMETER;
 
-    if (buffer->length > MICROBIT_RADIO_MAX_PACKET_SIZE + MICROBIT_RADIO_HEADER_SIZE - 1)
+    if (buffer->length > MICROBIT_DROPLET_MAX_PACKET_SIZE + MICROBIT_DROPLET_HEADER_SIZE - 1)
         return DEVICE_INVALID_PARAMETER;
+
+    DMESG("Droplet::send protocol %d", buffer->protocol);
 
     // Firstly, disable the Radio interrupt. We want to wait until the trasmission completes.
     NVIC_DisableIRQ(RADIO_IRQn);
@@ -538,7 +545,7 @@ int MicroBitRadio::send(FrameBuffer *buffer)
 /**
  * Puts the component in (or out of) sleep (low power) mode.
  */
-int MicroBitRadio::setSleep(bool doSleep)
+int Droplet::setSleep(bool doSleep)
 {
     if (ble_running())
         return DEVICE_NOT_SUPPORTED;
@@ -569,6 +576,6 @@ int MicroBitRadio::setSleep(bool doSleep)
             NVIC_EnableIRQ(RADIO_IRQn);
         }
     }
-   
+
     return DEVICE_OK;
 }

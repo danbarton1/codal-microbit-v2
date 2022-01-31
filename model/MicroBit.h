@@ -88,6 +88,8 @@ DEALINGS IN THE SOFTWARE.
 
 #include "MicroBitStorage.h"
 
+#include "Droplet.h"
+
 //#include "MicroBitLightSensor.h"
 
 
@@ -168,7 +170,8 @@ namespace codal
             Button                      buttonB;
             MultiButton                 buttonAB;
             TouchButton                 logo;
-            MicroBitRadio               radio;
+            //MicroBitRadio               radio;
+            Droplet                     radio;
             MicroBitThermometer         thermometer;
             Accelerometer&              accelerometer;
             Compass&                    compass;
