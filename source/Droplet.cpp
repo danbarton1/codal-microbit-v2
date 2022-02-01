@@ -85,7 +85,7 @@ extern "C" void RADIO_IRQHandler(void)
             // The queued packet will get the rssi value set above.
             Droplet::instance->queueRxBuf();
 
-            DropletFrameBuffer *buffer = Droplet::instance->getRxBuf();
+            // DropletFrameBuffer *buffer = Droplet::instance->getRxBuf();
             // Set the new buffer for DMA
             NRF_RADIO->PACKETPTR = (uint32_t) Droplet::instance->getRxBuf();
         }
@@ -107,7 +107,7 @@ extern "C" void RADIO_IRQHandler(void)
   * @note This class is demand activated, as a result most resources are only
   *       committed if send/recv or event registrations calls are made.
  */
-Droplet::Droplet(uint16_t id) : datagram(*this), event (*this)
+Droplet::Droplet(Timer &timer, uint16_t id) : timer(timer), datagram(*this), event (*this)
 {
     this->id = id;
     this->status = 0;
@@ -116,6 +116,7 @@ Droplet::Droplet(uint16_t id) : datagram(*this), event (*this)
     this->rssi = 0;
     this->rxQueue = nullptr;
     this->rxBuf = nullptr;
+    this->dropletStatus = DropletStatus::Initialisation;
 
     instance = this;
 }

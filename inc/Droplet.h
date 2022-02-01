@@ -37,6 +37,7 @@ namespace codal
 #include "PacketBuffer.h"
 #include "DropletDatagram.h"
 #include "DropletEvent.h"
+#include "Timer.h"
 
 /**
  * Provides a simple broadcast radio abstraction, built upon the raw nrf51822 RADIO module.
@@ -143,7 +144,7 @@ namespace codal
         DropletFrameBuffer      *rxBuf;     // A pointer to the buffer being actively used by the RADIO hardware.
         DropletSlot             slots[MICROBIT_DROPLET_SLOTS];
         DropletStatus           dropletStatus;
-        Timer           timer;
+        Timer                   &timer;
 
     public:
         DropletDatagram   datagram;   // A simple datagram service.
@@ -158,7 +159,7 @@ namespace codal
              * @note This class is demand activated, as a result most resources are only
              *       committed if send/recv or event registrations calls are made.
          */
-        Droplet(uint16_t id = DEVICE_ID_RADIO);
+        Droplet(Timer &timer, uint16_t id = DEVICE_ID_RADIO);
 
         /**
              * Change the output power level of the transmitter to the given value.
