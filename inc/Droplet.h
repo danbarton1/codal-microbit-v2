@@ -84,6 +84,14 @@ namespace codal
 #define MICROBIT_DROPLET_MAX_PACKET_SIZE        100
 #define MICROBIT_DROPLET_HEADER_SIZE            12
 
+#define MICROBIT_DROPLET_ADVERT 1 << 0
+#define MICROBIT_DROPLET_KEEP_ALIVE 1 << 1
+#define MICROBIT_DROPLET_DONE 1 << 2
+#define MICROBIT_DROPLET_FREE 1 << 3
+#define MICROBIT_DROPLET_ERROR 1 << 4
+
+#define MICROBIT_DROPLET_INITIAL_TTL 5
+
 namespace codal
 {
     struct DropletFrameBuffer
@@ -98,6 +106,11 @@ namespace codal
         uint8_t payload[MICROBIT_DROPLET_MAX_PACKET_SIZE];    // User / higher layer protocol data
         DropletFrameBuffer *next;                              // Linkage, to allow this and other protocols to queue packets pending processing.
         int rssi;                               // Received signal strength of this frame.
+
+        DropletFrameBuffer() : ttl(MICROBIT_DROPLET_INITIAL_TTL), initialTtl(MICROBIT_DROPLET_INITIAL_TTL)
+        {
+            
+        }
     };
 
     struct DropletSlot

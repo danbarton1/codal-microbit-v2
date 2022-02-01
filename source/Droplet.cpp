@@ -62,7 +62,6 @@ Droplet* Droplet::instance = NULL;
 
 extern "C" void RADIO_IRQHandler(void)
 {
-    DMESG("RADIO_IRQHandler");
     if(NRF_RADIO->EVENTS_READY)
     {
         NRF_RADIO->EVENTS_READY = 0;
@@ -87,7 +86,6 @@ extern "C" void RADIO_IRQHandler(void)
             Droplet::instance->queueRxBuf();
 
             DropletFrameBuffer *buffer = Droplet::instance->getRxBuf();
-            DMESG("RADIO_IRQHandler Protocol %d", buffer->protocol);
             // Set the new buffer for DMA
             NRF_RADIO->PACKETPTR = (uint32_t) Droplet::instance->getRxBuf();
         }
@@ -412,8 +410,6 @@ void Droplet::idleCallback()
     {
         DropletFrameBuffer *p = rxQueue;
 
-        DMESG("%d", p->protocol);
-
         switch (p->protocol)
         {
             case MICROBIT_RADIO_PROTOCOL_DATAGRAM:
@@ -495,8 +491,6 @@ int Droplet::send(DropletFrameBuffer *buffer)
 
     if (buffer->length > MICROBIT_DROPLET_MAX_PACKET_SIZE + MICROBIT_DROPLET_HEADER_SIZE - 1)
         return DEVICE_INVALID_PARAMETER;
-
-    DMESG("Droplet::send protocol %d", buffer->protocol);
 
     // Firstly, disable the Radio interrupt. We want to wait until the trasmission completes.
     NVIC_DisableIRQ(RADIO_IRQn);

@@ -25,6 +25,7 @@ Copyright (c) 2016 British Broadcasting Corporation.
 
 #include "Droplet.h"
 #include "MicroBit.h"
+#include <vector>
 
 using namespace codal;
 
@@ -131,8 +132,6 @@ int DropletDatagram::send(uint8_t *buffer, int len)
     buf.protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
     memcpy(buf.payload, buffer, len);
 
-    DMESG("%d", buf.protocol);
-
     return radio.send(&buf);
 }
 
@@ -165,7 +164,6 @@ int DropletDatagram::send(PacketBuffer data)
  */
 int DropletDatagram::send(ManagedString data)
 {
-    DMESG("Sending");
     return send((uint8_t *)data.toCharArray(), data.length());
 }
 
@@ -176,12 +174,13 @@ int DropletDatagram::send(ManagedString data)
  */
 void DropletDatagram::packetReceived()
 {
-    DMESG("PacketReceived");
     DropletFrameBuffer *packet = radio.recv();
     int queueDepth = 0;
 
     // We add to the tail of the queue to preserve causal ordering.
     packet->next = NULL;
+    packet->ttl--;
+    DMESG("%d", packet->ttl);
 
     if (rxQueue == NULL)
     {
@@ -205,5 +204,8 @@ void DropletDatagram::packetReceived()
         p->next = packet;
     }
 
+    if (packet->ttl > 0)
+        radio.send(packet);
+    
     Event(DEVICE_ID_RADIO, MICROBIT_RADIO_EVT_DATAGRAM);
 }
