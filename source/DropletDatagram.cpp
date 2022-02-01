@@ -180,7 +180,7 @@ void DropletDatagram::packetReceived()
     // We add to the tail of the queue to preserve causal ordering.
     packet->next = NULL;
     packet->ttl--;
-    DMESG("%d", packet->ttl);
+    DMESG("ttl: %d", packet->ttl);
 
     if (rxQueue == NULL)
     {

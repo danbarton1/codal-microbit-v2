@@ -92,6 +92,11 @@ namespace codal
 
 #define MICROBIT_DROPLET_INITIAL_TTL 5
 
+#define MICROBIT_DROPLET_STANDARD_SLOTS 50
+#define MICROBIT_DROPLET_ADVERTISEMENT_SLOTS 1
+#define MICROBIT_DROPLET_SLOT_DURATION 1 / MICROBIT_DROPLET_STANDARD_SLOTS
+#define MICROBIT_DROPLET_SLOTS MICROBIT_DROPLET_STANDARD_SLOTS + MICROBIT_DROPLET_ADVERTISEMENT_SLOTS
+
 namespace codal
 {
     struct DropletFrameBuffer
@@ -109,7 +114,7 @@ namespace codal
 
         DropletFrameBuffer() : ttl(MICROBIT_DROPLET_INITIAL_TTL), initialTtl(MICROBIT_DROPLET_INITIAL_TTL)
         {
-            
+
         }
     };
 
@@ -121,14 +126,23 @@ namespace codal
         uint8_t distance:4, flags:4;
         uint8_t errors;
     };
+
+    enum DropletStatus
+    {
+        Initialisation,
+        Discovery,
+        Synchronised
+    };
     
     class Droplet : public CodalComponent
     {
         uint8_t                 group;      // The radio group to which this micro:bit belongs.
         uint8_t                 queueDepth; // The number of packets in the receiver queue.
         int                     rssi;
-        DropletFrameBuffer             *rxQueue;   // A linear list of incoming packets, queued awaiting processing.
-        DropletFrameBuffer             *rxBuf;     // A pointer to the buffer being actively used by the RADIO hardware.
+        DropletFrameBuffer      *rxQueue;   // A linear list of incoming packets, queued awaiting processing.
+        DropletFrameBuffer      *rxBuf;     // A pointer to the buffer being actively used by the RADIO hardware.
+        DropletSlot             slots[MICROBIT_DROPLET_SLOTS];
+        DropletStatus           dropletStatus;
 
     public:
         DropletDatagram   datagram;   // A simple datagram service.
