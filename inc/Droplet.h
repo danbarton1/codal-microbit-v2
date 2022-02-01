@@ -143,6 +143,7 @@ namespace codal
         DropletFrameBuffer      *rxBuf;     // A pointer to the buffer being actively used by the RADIO hardware.
         DropletSlot             slots[MICROBIT_DROPLET_SLOTS];
         DropletStatus           dropletStatus;
+        Timer           timer;
 
     public:
         DropletDatagram   datagram;   // A simple datagram service.
