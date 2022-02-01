@@ -30,8 +30,11 @@ Copyright (c) 2016 British Broadcasting Corporation.
 #include "CodalFiber.h"
 #include "nrf.h"
 #include "DropletEvent.h"
+#include "MicroBit.h"
 
 using namespace codal;
+
+extern MicroBit uBit;
 
 const uint8_t MICROBIT_RADIO_POWER_LEVEL[] = {0xD8, 0xD8, 0xEC, 0xF0, 0xF4, 0xF8, 0xFC, 0x00, 0x03, 0x04};
 
@@ -99,6 +102,11 @@ extern "C" void RADIO_IRQHandler(void)
     }
 } 
 
+void onInitialiseEvent(MicroBitEvent e)
+{
+    DMESG("onInitialiseEvent");
+}
+
 /**
   * Constructor.
   *
@@ -119,6 +127,9 @@ Droplet::Droplet(Timer &timer, uint16_t id) : timer(timer), datagram(*this), eve
     this->dropletStatus = DropletStatus::Initialisation;
 
     instance = this;
+
+    this->timer.eventAfter(2000, DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT_ID);
+    uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT_ID, onInitialiseEvent);
 }
 
 /**
