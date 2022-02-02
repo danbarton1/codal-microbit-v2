@@ -74,10 +74,27 @@ void onInitialiseEvent(MicroBitEvent e)
     
     DMESG("Initialisation failed");
 
-    // Send packet with ADVERT flag
+    DropletFrameBuffer *buffer = new DropletFrameBuffer();
+    buffer->length = MICROBIT_DROPLET_HEADER_SIZE - 1;
+    buffer->flags |= MICROBIT_DROPLET_ADVERT;
+    buffer->slotIdentifier = 0;
+    buffer->deviceIdentifier = uBit.getSerialNumber();
+    buffer->protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
 
-    DropletFrameBuffer buffer;
-    buffer.flags |= MICROBIT_DROPLET_ADVERT;
+    // TODO: This never sends, fix
+    int result = Droplet::instance->send(buffer);
+
+    if (result == DEVICE_NOT_SUPPORTED)
+        DMESG("BLE Running");
+    
+    if (result == DEVICE_INVALID_PARAMETER)
+        DMESG("Buffer is null");
+
+    if (result == DEVICE_INVALID_PARAMETER)
+        DMESG("Length too big");
+
+    if (result == MICROBIT_OK)
+        DMESG("OK");
 }
 
 extern "C" void RADIO_IRQHandler(void)
@@ -543,6 +560,7 @@ DropletFrameBuffer* Droplet::recv()
  */
 int Droplet::send(DropletFrameBuffer *buffer)
 {
+    DMESG("Droplet::send");
     if (ble_running())
         return DEVICE_NOT_SUPPORTED;
 

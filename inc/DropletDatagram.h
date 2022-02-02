@@ -125,6 +125,8 @@ namespace codal
          */
         int send(ManagedString data);
 
+        void networkDiscovery(DropletFrameBuffer *buffer);
+
         /**
          * Protocol handler callback. This is called when the radio receives a packet marked as a datagram.
          *

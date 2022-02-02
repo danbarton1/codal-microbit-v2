@@ -27,6 +27,8 @@ Copyright (c) 2016 British Broadcasting Corporation.
 #include "MicroBit.h"
 #include <vector>
 
+extern MicroBit uBit;
+
 using namespace codal;
 
 /**
@@ -127,6 +129,7 @@ int DropletDatagram::send(uint8_t *buffer, int len)
     DropletFrameBuffer buf;
 
     buf.length = len + MICROBIT_DROPLET_HEADER_SIZE - 1;
+    buf.deviceIdentifier = uBit.getSerialNumber();
     // buf.version = 1;
     // buf.group = 0;
     buf.protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
@@ -167,20 +170,8 @@ int DropletDatagram::send(ManagedString data)
     return send((uint8_t *)data.toCharArray(), data.length());
 }
 
-/**
-  * Protocol handler callback. This is called when the radio receives a packet marked as a datagram.
-  *
-  * This function process this packet, and queues it for user reception.
- */
-void DropletDatagram::packetReceived()
+void DropletDatagram::networkDiscovery(DropletFrameBuffer *packet)
 {
-    DropletFrameBuffer *packet = radio.recv();
-    int queueDepth = 0;
-
-    // We add to the tail of the queue to preserve causal ordering.
-    packet->next = NULL;
-    packet->ttl--;
-
     uint8_t slotId = packet->slotIdentifier;
 
     if (Droplet::instance->getDropletStatus() == DropletStatus::Initialisation)
@@ -189,17 +180,38 @@ void DropletDatagram::packetReceived()
         Droplet::instance->setInitialSlotId(slotId);
         DMESG("Discovery mode");
         // TODO: Synchronise to the network clock
+        //uint8_t hops = packet->initialTtl - packet->ttl;
+        //uint32_t transmission = (packet->length);
     }
-    else if (Droplet::instance->getDropletStatus() == DropletStatus::Discovery)
+    else if (Droplet::instance->getDropletStatus() == DropletStatus::Discovery && packet->deviceIdentifier != uBit.getSerialNumber())
     {
-        Droplet::instance->getLastSlotId(slotId);
-        // TODO: Potential bug - if a slot if dropped in the middle it cause this to never complete, must check!
+        // TODO: Potential bug - if a slot if dropped in the middle it could cause this to never complete, must check!
         if (Droplet::instance->getLastSlotId() <= slotId && slotId >= Droplet::instance->getInitialSlotId())
         {
             DMESG("Discovery mode complete - synchronised");
             Droplet::instance->setDropletStatus(DropletStatus::Synchronised);
         }
+
+        Droplet::instance->setLastSlotId(slotId);
     }
+}
+
+/**
+  * Protocol handler callback. This is called when the radio receives a packet marked as a datagram.
+  *
+  * This function process this packet, and queues it for user reception.
+ */
+void DropletDatagram::packetReceived()
+{
+    DMESG("Packet received");
+    DropletFrameBuffer *packet = radio.recv();
+    int queueDepth = 0;
+
+    // We add to the tail of the queue to preserve causal ordering.
+    packet->next = NULL;
+    packet->ttl--;
+
+    networkDiscovery(packet);
 
     if (rxQueue == NULL)
     {
