@@ -63,6 +63,23 @@ const uint8_t MICROBIT_RADIO_POWER_LEVEL[] = {0xD8, 0xD8, 0xEC, 0xF0, 0xF4, 0xF8
 
 Droplet* Droplet::instance = NULL;
 
+
+void onInitialiseEvent(MicroBitEvent e)
+{
+    if (Droplet::instance->getDropletStatus() != DropletStatus::Initialisation)
+    {
+        DMESG("Initialisation complete");
+        return;
+    }
+    
+    DMESG("Initialisation failed");
+
+    // Send packet with ADVERT flag
+
+    DropletFrameBuffer buffer;
+    buffer.flags |= MICROBIT_DROPLET_ADVERT;
+}
+
 extern "C" void RADIO_IRQHandler(void)
 {
     if(NRF_RADIO->EVENTS_READY)
@@ -102,11 +119,6 @@ extern "C" void RADIO_IRQHandler(void)
     }
 } 
 
-void onInitialiseEvent(MicroBitEvent e)
-{
-    DMESG("onInitialiseEvent");
-}
-
 /**
   * Constructor.
   *
@@ -128,8 +140,13 @@ Droplet::Droplet(Timer &timer, uint16_t id) : timer(timer), datagram(*this), eve
 
     instance = this;
 
-    this->timer.eventAfter(2000, DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT_ID);
-    uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT_ID, onInitialiseEvent);
+    this->timer.eventAfter(2000, DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT);
+    uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT, onInitialiseEvent);
+}
+
+void Droplet::checkSlotWindow(uint8_t slotId)
+{
+
 }
 
 /**
@@ -179,6 +196,37 @@ int Droplet::setFrequencyBand(int band)
 DropletFrameBuffer* Droplet::getRxBuf()
 {
     return rxBuf;
+}
+
+DropletStatus Droplet::getDropletStatus()
+{
+    return dropletStatus;
+}
+
+void Droplet::setDropletStatus(DropletStatus status)
+{
+    dropletStatus = status;
+}
+
+void Droplet::setLastSlotId(uint8_t slotId)
+{
+    lastSlotId = slotId;
+}
+
+uint8_t Droplet::getLastSlotId()
+{
+    return lastSlotId;
+}
+
+void Droplet::setInitialSlotId(uint8_t slotId)
+{
+    setLastSlotId(slotId);
+    initialSlotId = slotId;
+}
+
+uint8_t Droplet::getInitialSlotId()
+{
+    return initialSlotId;
 }
 
 /**

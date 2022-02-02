@@ -98,7 +98,7 @@ namespace codal
 #define MICROBIT_DROPLET_SLOT_DURATION 1 / MICROBIT_DROPLET_STANDARD_SLOTS
 #define MICROBIT_DROPLET_SLOTS MICROBIT_DROPLET_STANDARD_SLOTS + MICROBIT_DROPLET_ADVERTISEMENT_SLOTS
 
-#define MICROBIT_DROPLET_INITIALISATION_EVENT_ID 100
+#define MICROBIT_DROPLET_INITIALISATION_EVENT 100
 
 namespace codal
 {
@@ -147,6 +147,8 @@ namespace codal
         DropletSlot             slots[MICROBIT_DROPLET_SLOTS];
         DropletStatus           dropletStatus;
         Timer                   &timer;
+        uint8_t                 lastSlotId;
+        uint8_t                 initialSlotId;
 
     public:
         DropletDatagram   datagram;   // A simple datagram service.
@@ -162,6 +164,11 @@ namespace codal
              *       committed if send/recv or event registrations calls are made.
          */
         Droplet(Timer &timer, uint16_t id = DEVICE_ID_RADIO);
+
+        /**
+             * 
+         */ 
+        void checkSlotWindow(uint8_t slotId);
 
         /**
              * Change the output power level of the transmitter to the given value.
@@ -217,6 +224,24 @@ namespace codal
              * @return the most recent RSSI value or MICROBIT_NOT_SUPPORTED if the BLE stack is running.
          */
         int getRSSI();
+
+        /**
+             * @return The status of the local protocol
+         */
+        DropletStatus getDropletStatus();
+
+        /**
+             * @param The new status
+         */
+        void setDropletStatus(DropletStatus status);
+
+        void setLastSlotId(uint8_t slotId);
+
+        void setInitialSlotId(uint8_t slotId);
+
+        uint8_t getLastSlotId();
+
+        uint8_t getInitialSlotId();
 
         /**
              * Initialises the radio for use as a multipoint sender/receiver

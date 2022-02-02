@@ -180,7 +180,26 @@ void DropletDatagram::packetReceived()
     // We add to the tail of the queue to preserve causal ordering.
     packet->next = NULL;
     packet->ttl--;
-    DMESG("ttl: %d", packet->ttl);
+
+    uint8_t slotId = packet->slotIdentifier;
+
+    if (Droplet::instance->getDropletStatus() == DropletStatus::Initialisation)
+    {
+        Droplet::instance->setDropletStatus(DropletStatus::Discovery);
+        Droplet::instance->setInitialSlotId(slotId);
+        DMESG("Discovery mode");
+        // TODO: Synchronise to the network clock
+    }
+    else if (Droplet::instance->getDropletStatus() == DropletStatus::Discovery)
+    {
+        Droplet::instance->getLastSlotId(slotId);
+        // TODO: Potential bug - if a slot if dropped in the middle it cause this to never complete, must check!
+        if (Droplet::instance->getLastSlotId() <= slotId && slotId >= Droplet::instance->getInitialSlotId())
+        {
+            DMESG("Discovery mode complete - synchronised");
+            Droplet::instance->setDropletStatus(DropletStatus::Synchronised);
+        }
+    }
 
     if (rxQueue == NULL)
     {
