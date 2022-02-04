@@ -63,6 +63,8 @@ const uint8_t MICROBIT_RADIO_POWER_LEVEL[] = {0xD8, 0xD8, 0xEC, 0xF0, 0xF4, 0xF8
 
 Droplet* Droplet::instance = NULL;
 
+#define DROPLET_RECEIVE 1
+#define DROPLET_FORWARD 2
 
 void onInitialiseEvent(MicroBitEvent e)
 {
@@ -80,25 +82,24 @@ void onInitialiseEvent(MicroBitEvent e)
     buffer->slotIdentifier = 0;
     buffer->deviceIdentifier = uBit.getSerialNumber();
     buffer->protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
+    buffer->initialTtl = MICROBIT_DROPLET_INITIALISATION_TTL;
+    buffer->ttl = MICROBIT_DROPLET_INITIALISATION_TTL;
 
-    // TODO: This never sends, fix
+    // TODO: Keep sending
     int result = Droplet::instance->send(buffer);
 
     if (result == DEVICE_NOT_SUPPORTED)
         DMESG("BLE Running");
     
     if (result == DEVICE_INVALID_PARAMETER)
-        DMESG("Buffer is null");
-
-    if (result == DEVICE_INVALID_PARAMETER)
-        DMESG("Length too big");
-
-    if (result == MICROBIT_OK)
-        DMESG("OK");
+        DMESG("Buffer is null or Length too big");
 }
 
 extern "C" void RADIO_IRQHandler(void)
 {
+    DropletFrameBuffer *buffer = Droplet::instance->getRxBuf();
+    // Set the new buffer for DMA
+ 
     if(NRF_RADIO->EVENTS_READY)
     {
         NRF_RADIO->EVENTS_READY = 0;
@@ -121,10 +122,54 @@ extern "C" void RADIO_IRQHandler(void)
             // Now move on to the next buffer, if possible.
             // The queued packet will get the rssi value set above.
             Droplet::instance->queueRxBuf();
+           
+            NRF_RADIO->PACKETPTR = (uint32_t) buffer;
 
-            // DropletFrameBuffer *buffer = Droplet::instance->getRxBuf();
-            // Set the new buffer for DMA
-            NRF_RADIO->PACKETPTR = (uint32_t) Droplet::instance->getRxBuf();
+            if (buffer->ttl > 0)
+            {
+                buffer->ttl--;
+                // Firstly, disable the Radio interrupt. We want to wait until the trasmission completes.
+                NVIC_DisableIRQ(RADIO_IRQn);
+
+                // Turn off the transceiver.
+                NRF_RADIO->EVENTS_DISABLED = 0;
+                NRF_RADIO->TASKS_DISABLE = 1;
+                while(NRF_RADIO->EVENTS_DISABLED == 0);
+
+                // Configure the radio to send the buffer provided.
+                // NRF_RADIO->PACKETPTR = (uint32_t) buffer;
+
+                // Turn on the transmitter, and wait for it to signal that it's ready to use.
+                NRF_RADIO->EVENTS_READY = 0;
+                NRF_RADIO->TASKS_TXEN = 1;
+                while (NRF_RADIO->EVENTS_READY == 0);
+
+                // Start transmission and wait for end of packet.
+                NRF_RADIO->TASKS_START = 1;
+                NRF_RADIO->EVENTS_END = 0;
+                while(NRF_RADIO->EVENTS_END == 0);
+
+                // Return the radio to using the default receive buffer
+                NRF_RADIO->PACKETPTR = (uint32_t) Droplet::instance->getRxBuf();;
+
+                // Turn off the transmitter.
+                NRF_RADIO->EVENTS_DISABLED = 0;
+                NRF_RADIO->TASKS_DISABLE = 1;
+                while(NRF_RADIO->EVENTS_DISABLED == 0);
+
+                // Start listening for the next packet
+                NRF_RADIO->EVENTS_READY = 0;
+                NRF_RADIO->TASKS_RXEN = 1;
+                while(NRF_RADIO->EVENTS_READY == 0);
+
+                NRF_RADIO->EVENTS_END = 0;
+                NRF_RADIO->TASKS_START = 1;
+
+                // Re-enable the Radio interrupt.
+                NVIC_ClearPendingIRQ(RADIO_IRQn);
+                NVIC_EnableIRQ(RADIO_IRQn);
+                DMESG("RADIO_IRQHandler - ttl: %d", buffer->ttl);
+            }
         }
         else
         {
@@ -133,7 +178,7 @@ extern "C" void RADIO_IRQHandler(void)
 
         // Start listening and wait for the END event
         NRF_RADIO->TASKS_START = 1;
-    }
+    } 
 } 
 
 /**
@@ -164,6 +209,11 @@ Droplet::Droplet(Timer &timer, uint16_t id) : timer(timer), datagram(*this), eve
 void Droplet::checkSlotWindow(uint8_t slotId)
 {
 
+}
+
+int Droplet::setTimeToLive(uint8_t ttl)
+{
+    return MICROBIT_OK;
 }
 
 /**

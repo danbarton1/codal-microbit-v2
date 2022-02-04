@@ -92,6 +92,7 @@ namespace codal
 #define MICROBIT_DROPLET_ERROR 1 << 4
 
 #define MICROBIT_DROPLET_INITIAL_TTL 5
+#define MICROBIT_DROPLET_INITIALISATION_TTL 2
 
 #define MICROBIT_DROPLET_STANDARD_SLOTS 50
 #define MICROBIT_DROPLET_ADVERTISEMENT_SLOTS 1
@@ -110,6 +111,7 @@ namespace codal
         uint8_t protocol; // Don't move position, it has to be the 4th byte
         uint8_t ttl:4, initialTtl:4;
         uint64_t deviceIdentifier;
+        // uint32_t startTime;
 
         uint8_t payload[MICROBIT_DROPLET_MAX_PACKET_SIZE];    // User / higher layer protocol data
         DropletFrameBuffer *next;                              // Linkage, to allow this and other protocols to queue packets pending processing.
@@ -134,7 +136,8 @@ namespace codal
     {
         Initialisation,
         Discovery,
-        Synchronised
+        Synchronised,
+        Listen
     };
     
     class Droplet : public CodalComponent
@@ -169,6 +172,15 @@ namespace codal
              * 
          */ 
         void checkSlotWindow(uint8_t slotId);
+
+        /**
+             * Change the ttl of the radio packets
+             *
+             * @param ttl A non negative value, shouldn't exceed the size of the network
+             *
+             * @return MICROBIT_OK on success
+         */
+        int setTimeToLive(uint8_t ttl);
 
         /**
              * Change the output power level of the transmitter to the given value.

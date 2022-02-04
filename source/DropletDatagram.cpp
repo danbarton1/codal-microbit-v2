@@ -183,7 +183,7 @@ void DropletDatagram::networkDiscovery(DropletFrameBuffer *packet)
         //uint8_t hops = packet->initialTtl - packet->ttl;
         //uint32_t transmission = (packet->length);
     }
-    else if (Droplet::instance->getDropletStatus() == DropletStatus::Discovery && packet->deviceIdentifier != uBit.getSerialNumber())
+    else if (Droplet::instance->getDropletStatus() == DropletStatus::Discovery && packet->deviceIdentifier != uBit.getSerialNumber() && (packet->flags & MICROBIT_DROPLET_ADVERT) == 0)
     {
         // TODO: Potential bug - if a slot if dropped in the middle it could cause this to never complete, must check!
         if (Droplet::instance->getLastSlotId() <= slotId && slotId >= Droplet::instance->getInitialSlotId())
@@ -209,7 +209,7 @@ void DropletDatagram::packetReceived()
 
     // We add to the tail of the queue to preserve causal ordering.
     packet->next = NULL;
-    packet->ttl--;
+    // packet->ttl--;
 
     networkDiscovery(packet);
 
@@ -235,8 +235,8 @@ void DropletDatagram::packetReceived()
         p->next = packet;
     }
 
-    if (packet->ttl > 0)
-        radio.send(packet);
+    //if (packet->ttl > 0)
+        //radio.send(packet);
     
     Event(DEVICE_ID_RADIO, MICROBIT_RADIO_EVT_DATAGRAM);
 }
