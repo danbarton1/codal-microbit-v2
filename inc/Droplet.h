@@ -83,7 +83,7 @@ namespace codal
 #define MICROBIT_RADIO_EVT_DATAGRAM             1       // Event to signal that a new datagram has been received.
 
 #define MICROBIT_DROPLET_MAX_PACKET_SIZE        100
-#define MICROBIT_DROPLET_HEADER_SIZE            12
+#define MICROBIT_DROPLET_HEADER_SIZE            17
 
 #define MICROBIT_DROPLET_ADVERT 1 << 0
 #define MICROBIT_DROPLET_KEEP_ALIVE 1 << 1
@@ -100,6 +100,7 @@ namespace codal
 #define MICROBIT_DROPLET_SLOTS MICROBIT_DROPLET_STANDARD_SLOTS + MICROBIT_DROPLET_ADVERTISEMENT_SLOTS
 
 #define MICROBIT_DROPLET_INITIALISATION_EVENT 100
+#define MICROBIT_DROPLET_SCHEDULE_EVENT 101
 
 namespace codal
 {
@@ -111,7 +112,7 @@ namespace codal
         uint8_t protocol; // Don't move position, it has to be the 4th byte
         uint8_t ttl:4, initialTtl:4;
         uint64_t deviceIdentifier;
-        // uint32_t startTime;
+        uint32_t startTime;
 
         uint8_t payload[MICROBIT_DROPLET_MAX_PACKET_SIZE];    // User / higher layer protocol data
         DropletFrameBuffer *next;                              // Linkage, to allow this and other protocols to queue packets pending processing.
@@ -130,6 +131,12 @@ namespace codal
         uint8_t expiration;
         uint8_t distance:4, flags:4;
         uint8_t errors;
+        bool unused;
+
+        DropletSlot() : unused(false)
+        {
+
+        }
     };
 
     enum DropletStatus

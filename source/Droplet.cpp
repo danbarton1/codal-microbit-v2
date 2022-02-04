@@ -125,9 +125,11 @@ extern "C" void RADIO_IRQHandler(void)
            
             NRF_RADIO->PACKETPTR = (uint32_t) buffer;
 
+            buffer->ttl--;
+
+            // Forwarding packet
             if (buffer->ttl > 0)
             {
-                buffer->ttl--;
                 // Firstly, disable the Radio interrupt. We want to wait until the trasmission completes.
                 NVIC_DisableIRQ(RADIO_IRQn);
 

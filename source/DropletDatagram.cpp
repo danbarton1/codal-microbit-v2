@@ -178,7 +178,7 @@ void DropletDatagram::networkDiscovery(DropletFrameBuffer *packet)
     {
         Droplet::instance->setDropletStatus(DropletStatus::Discovery);
         Droplet::instance->setInitialSlotId(slotId);
-        DMESG("Discovery mode");
+        DMESG("Entered discovery mode");
         // TODO: Synchronise to the network clock
         //uint8_t hops = packet->initialTtl - packet->ttl;
         //uint32_t transmission = (packet->length);
