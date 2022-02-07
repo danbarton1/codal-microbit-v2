@@ -131,7 +131,7 @@ extern "C" void RADIO_IRQHandler(void)
             if (buffer->ttl > 0)
             {
                 // Firstly, disable the Radio interrupt. We want to wait until the trasmission completes.
-                NVIC_DisableIRQ(RADIO_IRQn);
+                // NVIC_DisableIRQ(RADIO_IRQn);
 
                 // Turn off the transceiver.
                 NRF_RADIO->EVENTS_DISABLED = 0;
@@ -154,22 +154,12 @@ extern "C" void RADIO_IRQHandler(void)
                 // Return the radio to using the default receive buffer
                 NRF_RADIO->PACKETPTR = (uint32_t) Droplet::instance->getRxBuf();;
 
-                // Turn off the transmitter.
-                NRF_RADIO->EVENTS_DISABLED = 0;
-                NRF_RADIO->TASKS_DISABLE = 1;
-                while(NRF_RADIO->EVENTS_DISABLED == 0);
-
-                // Start listening for the next packet
-                NRF_RADIO->EVENTS_READY = 0;
-                NRF_RADIO->TASKS_RXEN = 1;
-                while(NRF_RADIO->EVENTS_READY == 0);
-
-                NRF_RADIO->EVENTS_END = 0;
-                NRF_RADIO->TASKS_START = 1;
+               
+                // NRF_RADIO->TASKS_START = 1;
 
                 // Re-enable the Radio interrupt.
-                NVIC_ClearPendingIRQ(RADIO_IRQn);
-                NVIC_EnableIRQ(RADIO_IRQn);
+                // NVIC_ClearPendingIRQ(RADIO_IRQn);
+                // NVIC_EnableIRQ(RADIO_IRQn);
                 DMESG("RADIO_IRQHandler - ttl: %d", buffer->ttl);
             }
         }
@@ -177,6 +167,18 @@ extern "C" void RADIO_IRQHandler(void)
         {
             Droplet::instance->setRSSI(0);
         }
+
+         // Turn off the transmitter.
+        NRF_RADIO->EVENTS_DISABLED = 0;
+        NRF_RADIO->TASKS_DISABLE = 1;
+        while(NRF_RADIO->EVENTS_DISABLED == 0);
+
+        // Start listening for the next packet
+        NRF_RADIO->EVENTS_READY = 0;
+        NRF_RADIO->TASKS_RXEN = 1;
+        while(NRF_RADIO->EVENTS_READY == 0);
+
+        NRF_RADIO->EVENTS_END = 0;
 
         // Start listening and wait for the END event
         NRF_RADIO->TASKS_START = 1;
