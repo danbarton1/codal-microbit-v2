@@ -70,7 +70,6 @@ void onInitialiseEvent(MicroBitEvent e)
 {
     if (Droplet::instance->getDropletStatus() != DropletStatus::Initialisation)
     {
-        DMESG("Initialisation complete");
         return;
     }
     
@@ -84,6 +83,7 @@ void onInitialiseEvent(MicroBitEvent e)
     buffer->protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
     buffer->initialTtl = MICROBIT_DROPLET_INITIALISATION_TTL;
     buffer->ttl = MICROBIT_DROPLET_INITIALISATION_TTL;
+    buffer->startTime = uBit.systemTime();
 
     // TODO: Keep sending
     int result = Droplet::instance->send(buffer);
@@ -93,10 +93,15 @@ void onInitialiseEvent(MicroBitEvent e)
     
     if (result == DEVICE_INVALID_PARAMETER)
         DMESG("Buffer is null or Length too big");
+
+    if (result == MICROBIT_OK)
+        DMESG("OK");
 }
 
+// TODO: It seems like the init method never gets called, I think it has something to do with this
 extern "C" void RADIO_IRQHandler(void)
 {
+
     DropletFrameBuffer *buffer = Droplet::instance->getRxBuf();
     // Set the new buffer for DMA
  
@@ -160,7 +165,7 @@ extern "C" void RADIO_IRQHandler(void)
                 // Re-enable the Radio interrupt.
                 // NVIC_ClearPendingIRQ(RADIO_IRQn);
                 // NVIC_EnableIRQ(RADIO_IRQn);
-                DMESG("RADIO_IRQHandler - ttl: %d", buffer->ttl);
+                // DMESG("RADIO_IRQHandler - ttl: %d", buffer->ttl);
             }
         }
         else
@@ -185,6 +190,11 @@ extern "C" void RADIO_IRQHandler(void)
     } 
 } 
 
+#include <string>
+#include <sstream>
+#include <iostream>
+
+
 /**
   * Constructor.
   *
@@ -193,7 +203,7 @@ extern "C" void RADIO_IRQHandler(void)
   * @note This class is demand activated, as a result most resources are only
   *       committed if send/recv or event registrations calls are made.
  */
-Droplet::Droplet(Timer &timer, uint16_t id) : timer(timer), datagram(*this), event (*this)
+Droplet::Droplet(Timer &timer, uint16_t id) : timer(timer), datagram(*this), event (*this), clock(timer)
 {
     this->id = id;
     this->status = 0;
@@ -205,9 +215,6 @@ Droplet::Droplet(Timer &timer, uint16_t id) : timer(timer), datagram(*this), eve
     this->dropletStatus = DropletStatus::Initialisation;
 
     instance = this;
-
-    this->timer.eventAfter(2000, DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT);
-    uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT, onInitialiseEvent);
 }
 
 void Droplet::checkSlotWindow(uint8_t slotId)
@@ -298,6 +305,11 @@ void Droplet::setInitialSlotId(uint8_t slotId)
 uint8_t Droplet::getInitialSlotId()
 {
     return initialSlotId;
+}
+
+Timer * Droplet::getTimer()
+{
+    return &timer;
 }
 
 /**
@@ -475,6 +487,9 @@ int Droplet::enable()
 
     // Done. Record that our RADIO is configured.
     status |= MICROBIT_RADIO_STATUS_INITIALISED;
+
+    this->timer.eventAfter(2000, DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT);
+    uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT, onInitialiseEvent);
 
     return DEVICE_OK;
 }

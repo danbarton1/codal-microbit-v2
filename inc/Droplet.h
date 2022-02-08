@@ -38,6 +38,7 @@ namespace codal
 #include "DropletDatagram.h"
 #include "DropletEvent.h"
 #include "Timer.h"
+#include "DropletNetworkClock.h"
 
 /**
  * Provides a simple broadcast radio abstraction, built upon the raw nrf51822 RADIO module.
@@ -83,7 +84,7 @@ namespace codal
 #define MICROBIT_RADIO_EVT_DATAGRAM             1       // Event to signal that a new datagram has been received.
 
 #define MICROBIT_DROPLET_MAX_PACKET_SIZE        100
-#define MICROBIT_DROPLET_HEADER_SIZE            17
+#define MICROBIT_DROPLET_HEADER_SIZE            21
 
 #define MICROBIT_DROPLET_ADVERT 1 << 0
 #define MICROBIT_DROPLET_KEEP_ALIVE 1 << 1
@@ -112,7 +113,7 @@ namespace codal
         uint8_t protocol; // Don't move position, it has to be the 4th byte
         uint8_t ttl:4, initialTtl:4;
         uint64_t deviceIdentifier;
-        uint32_t startTime;
+        unsigned long startTime;
 
         uint8_t payload[MICROBIT_DROPLET_MAX_PACKET_SIZE];    // User / higher layer protocol data
         DropletFrameBuffer *next;                              // Linkage, to allow this and other protocols to queue packets pending processing.
@@ -163,6 +164,7 @@ namespace codal
     public:
         DropletDatagram   datagram;   // A simple datagram service.
         DropletEvent      event;      // A simple event handling service.
+        DropletNetworkClock clock;    // A distributed network clock
         static Droplet    *instance;  // A singleton reference, used purely by the interrupt service routine.
 
         /**
@@ -261,6 +263,8 @@ namespace codal
         uint8_t getLastSlotId();
 
         uint8_t getInitialSlotId();
+
+        Timer * getTimer();
 
         /**
              * Initialises the radio for use as a multipoint sender/receiver

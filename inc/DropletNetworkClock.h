@@ -3,7 +3,6 @@
 
 #include "CodalConfig.h"
 #include "Timer.h"
-#include "Droplet.h"
 
 namespace codel
 {
@@ -15,12 +14,16 @@ namespace codal
     class DropletNetworkClock
     {
     private:
-        uint32_t time;
+        uint32_t time; // TODO: use ulong instead
+        uint32_t nextSlotTime;
         Timer &timer;
     public:
+        static DropletNetworkClock *instance; 
         DropletNetworkClock(Timer &timer);
         void init(uint32_t t);
-        void updateTime(uint32_t localSlotTime, uint32_t packetSlotTime, uint32_t currentTime);
+        void updateTime(uint32_t packetSendTime);
+        uint32_t getTime();
+        void setTime(uint32_t t);
     };
 }
 

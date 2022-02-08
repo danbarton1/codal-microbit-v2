@@ -108,6 +108,9 @@ PacketBuffer DropletDatagram::recv()
     return packet;
 }
 
+#include <iostream>
+#include <sstream>
+
 /**
   * Transmits the given buffer onto the broadcast radio.
   *
@@ -128,8 +131,16 @@ int DropletDatagram::send(uint8_t *buffer, int len)
 
     DropletFrameBuffer buf;
 
+    uint32_t t  = uBit.systemTime();
+
     buf.length = len + MICROBIT_DROPLET_HEADER_SIZE - 1;
     buf.deviceIdentifier = uBit.getSerialNumber();
+    buf.startTime = t;
+
+    std::ostringstream ss;
+    ss << t;
+    DMESG("Send time: %s", ss.str().c_str());
+
     // buf.version = 1;
     // buf.group = 0;
     buf.protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
@@ -176,8 +187,10 @@ void DropletDatagram::networkDiscovery(DropletFrameBuffer *packet)
 
     if (Droplet::instance->getDropletStatus() == DropletStatus::Initialisation)
     {
+        DMESG("Initialisation complete");
         Droplet::instance->setDropletStatus(DropletStatus::Discovery);
         Droplet::instance->setInitialSlotId(slotId);
+        DropletNetworkClock::instance->init(packet->startTime);
         DMESG("Entered discovery mode");
         // TODO: Synchronise to the network clock
         //uint8_t hops = packet->initialTtl - packet->ttl;
@@ -212,6 +225,11 @@ void DropletDatagram::packetReceived()
     // packet->ttl--;
 
     networkDiscovery(packet);
+
+    if (Droplet::instance->getDropletStatus() != DropletStatus::Initialisation)
+    {
+        // DropletNetworkClock::instance->updateTime(packet->startTime);
+    }
 
     if (rxQueue == NULL)
     {
