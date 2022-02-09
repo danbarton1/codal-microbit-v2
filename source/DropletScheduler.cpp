@@ -1,12 +1,27 @@
 #include "DropletScheduler.h"
 #include "Droplet.h"
 #include "MicroBit.h"
+#include <iterator>
+
 
 using namespace codal;
 
 extern MicroBit uBit;
 
 DropletScheduler *DropletScheduler::instance = NULL;
+
+void experiationCounterEvent(MicroBitEvent e)
+{
+    DropletSlot *p = DropletScheduler::instance->getSlots();
+
+    for (int i = 0; i < MICROBIT_DROPLET_SLOTS; i++, p++)
+    {
+        if ((p->flags & MICROBIT_DROPLET_ADVERT) != MICROBIT_DROPLET_ADVERT)
+        {
+            p->expiration--;
+        }
+    }
+}
 
 DropletScheduler::DropletScheduler(Timer &timer) : timer(timer)
 {
@@ -63,4 +78,9 @@ bool DropletScheduler::isNextSlotMine()
 void DropletScheduler::incrementError(uint8_t slotId)
 {
     slots[slotId].errors++;
+}
+
+DropletSlot *DropletScheduler::getSlots()
+{
+    return slots;
 }

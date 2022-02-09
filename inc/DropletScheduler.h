@@ -46,6 +46,7 @@ namespace codal
         bool isNextSlotMine();
         void incrementError(uint8_t slotId);
         void analysePacket(DropletFrameBuffer *buffer);
+        DropletSlot * getSlots();
         static DropletScheduler *instance;
     };
 };
