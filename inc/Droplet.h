@@ -95,11 +95,6 @@ namespace codal
 #define MICROBIT_DROPLET_INITIAL_TTL 5
 #define MICROBIT_DROPLET_INITIALISATION_TTL 2
 
-#define MICROBIT_DROPLET_STANDARD_SLOTS 50
-#define MICROBIT_DROPLET_ADVERTISEMENT_SLOTS 1
-#define MICROBIT_DROPLET_SLOT_DURATION 1 / MICROBIT_DROPLET_STANDARD_SLOTS
-#define MICROBIT_DROPLET_SLOTS MICROBIT_DROPLET_STANDARD_SLOTS + MICROBIT_DROPLET_ADVERTISEMENT_SLOTS
-
 #define MICROBIT_DROPLET_INITIALISATION_EVENT 100
 #define MICROBIT_DROPLET_SCHEDULE_EVENT 101
 
@@ -125,21 +120,6 @@ namespace codal
         }
     };
 
-    struct DropletSlot
-    {
-        uint64_t deviceIdentifier;
-        uint8_t slotIdentifier;
-        uint8_t expiration;
-        uint8_t distance:4, flags:4;
-        uint8_t errors;
-        bool unused;
-
-        DropletSlot() : unused(false)
-        {
-
-        }
-    };
-
     enum DropletStatus
     {
         Initialisation,
@@ -155,7 +135,6 @@ namespace codal
         int                     rssi;
         DropletFrameBuffer      *rxQueue;   // A linear list of incoming packets, queued awaiting processing.
         DropletFrameBuffer      *rxBuf;     // A pointer to the buffer being actively used by the RADIO hardware.
-        DropletSlot             slots[MICROBIT_DROPLET_SLOTS];
         DropletStatus           dropletStatus;
         Timer                   &timer;
         uint8_t                 lastSlotId;
@@ -329,6 +308,6 @@ namespace codal
          */
         virtual int setSleep(bool doSleep) override;
     };
-}
+};
 
 #endif

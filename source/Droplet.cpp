@@ -23,6 +23,9 @@ Copyright (c) 2016 British Broadcasting Corporation.
         DEALINGS IN THE SOFTWARE.
             */
 
+#include <string>
+#include <sstream>
+#include <iostream>
 #include "Droplet.h"
 #include "MicroBitDevice.h"
 #include "CodalComponent.h"
@@ -64,7 +67,10 @@ const uint8_t MICROBIT_RADIO_POWER_LEVEL[] = {0xD8, 0xD8, 0xEC, 0xF0, 0xF4, 0xF8
 Droplet* Droplet::instance = NULL;
 
 #define DROPLET_RECEIVE 1
-#define DROPLET_FORWARD 2
+#define DROPLET_TRANSMIT 2
+#define DROPLET_FORWARD 3
+
+volatile uint8_t radioState = DROPLET_RECEIVE; 
 
 void onInitialiseEvent(MicroBitEvent e)
 {
@@ -102,6 +108,31 @@ void onInitialiseEvent(MicroBitEvent e)
 extern "C" void RADIO_IRQHandler(void)
 {
 
+    /*
+    NRF_RADIO->EVENTS_END = 0;
+
+    if (NRF_RADIO->CRCSTATUS == 1)
+    {
+        int sample = (int)NRF_RADIO->RSSISAMPLE;
+        DropletFrameBuffer *buffer = Droplet::instance->getRxBuf();
+        NRF_RADIO->PACKETPTR = (uint32_t)buffer;
+
+        // Associate this packet's rssi value with the data just
+        // transferred by DMA receive
+        Droplet::instance->setRSSI(-sample);
+
+        // Now move on to the next buffer, if possible.
+        // The queued packet will get the rssi value set above.
+        Droplet::instance->queueRxBuf();
+    }
+    else
+    {
+        Droplet::instance->setRSSI(0);
+    }
+
+    NRF_RADIO->TASKS_START = 1;
+*/
+    // DMESG("Radio Handler");
     DropletFrameBuffer *buffer = Droplet::instance->getRxBuf();
     // Set the new buffer for DMA
  
@@ -130,6 +161,8 @@ extern "C" void RADIO_IRQHandler(void)
            
             NRF_RADIO->PACKETPTR = (uint32_t) buffer;
 
+            DMESG("rh ttl: %d", buffer->ttl);
+
             buffer->ttl--;
 
             // Forwarding packet
@@ -157,7 +190,7 @@ extern "C" void RADIO_IRQHandler(void)
                 while(NRF_RADIO->EVENTS_END == 0);
 
                 // Return the radio to using the default receive buffer
-                NRF_RADIO->PACKETPTR = (uint32_t) Droplet::instance->getRxBuf();;
+                NRF_RADIO->PACKETPTR = (uint32_t) Droplet::instance->getRxBuf();
 
                
                 // NRF_RADIO->TASKS_START = 1;
@@ -189,11 +222,6 @@ extern "C" void RADIO_IRQHandler(void)
         NRF_RADIO->TASKS_START = 1;
     } 
 } 
-
-#include <string>
-#include <sstream>
-#include <iostream>
-
 
 /**
   * Constructor.

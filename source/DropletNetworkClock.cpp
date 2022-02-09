@@ -7,7 +7,7 @@
 using namespace codal;
 extern MicroBit uBit;
 
-#define MILLISECONDS_TO_NANO 1
+#define MILLISECONDS_TO_NANO 1000
 
 DropletNetworkClock* DropletNetworkClock::instance = NULL;
 
@@ -32,21 +32,24 @@ void DropletNetworkClock::init(uint32_t t)
     ss << time;
 
     DMESG("Clock init time: %s", ss.str().c_str());
-    nextSlotTime = time + MICROBIT_DROPLET_SLOT_DURATION * MILLISECONDS_TO_NANO;
+    //nextSlotTime = time + MICROBIT_DROPLET_SLOT_DURATION * MILLISECONDS_TO_NANO;
 }
 
 void DropletNetworkClock::updateTime(uint32_t packetSendTime)
 {
     // uint64_t startTime = ((uint64_t)localSlotTime + packetSlotTime) / 2;
     // MICROBIT_DROPLET_SLOT_DURATION needs to be in milliseconds 
+
+    // Current time
+    // Packet send time
     
-    uint32_t estimatedCurrentSlotStartTime = ((uint64_t)packetSendTime + nextSlotTime - MICROBIT_DROPLET_SLOT_DURATION * MILLISECONDS_TO_NANO) / 2;
+    /*uint32_t estimatedCurrentSlotStartTime = ((uint64_t)packetSendTime + nextSlotTime - MICROBIT_DROPLET_SLOT_DURATION * MILLISECONDS_TO_NANO) / 2;
     uint32_t estimatedNextSlotStartTime = ((uint64_t)packetSendTime + nextSlotTime + MICROBIT_DROPLET_SLOT_DURATION * MILLISECONDS_TO_NANO) / 2;
     uint32_t timeUntilNextSlot = estimatedNextSlotStartTime - estimatedCurrentSlotStartTime;
     DMESG("Update time: %d %d %d %d", estimatedCurrentSlotStartTime, estimatedNextSlotStartTime, timeUntilNextSlot, packetSendTime);
     nextSlotTime = estimatedNextSlotStartTime;
     timer.cancel(DEVICE_ID_RADIO, MICROBIT_DROPLET_SCHEDULE_EVENT);
-    timer.eventEveryUs(timeUntilNextSlot, DEVICE_ID_RADIO, MICROBIT_DROPLET_SCHEDULE_EVENT);
+    timer.eventEveryUs(timeUntilNextSlot, DEVICE_ID_RADIO, MICROBIT_DROPLET_SCHEDULE_EVENT); */
 }
 
 uint32_t DropletNetworkClock::getTime()

@@ -131,7 +131,7 @@ int DropletDatagram::send(uint8_t *buffer, int len)
 
     DropletFrameBuffer buf;
 
-    uint32_t t  = uBit.systemTime();
+    uint32_t t  = system_timer_current_time_us();
 
     buf.length = len + MICROBIT_DROPLET_HEADER_SIZE - 1;
     buf.deviceIdentifier = uBit.getSerialNumber();
@@ -222,13 +222,13 @@ void DropletDatagram::packetReceived()
 
     // We add to the tail of the queue to preserve causal ordering.
     packet->next = NULL;
-    // packet->ttl--;
+    //packet->ttl--;
 
     networkDiscovery(packet);
 
     if (Droplet::instance->getDropletStatus() != DropletStatus::Initialisation)
     {
-        // DropletNetworkClock::instance->updateTime(packet->startTime);
+        DropletNetworkClock::instance->updateTime(packet->startTime);
     }
 
     if (rxQueue == NULL)
