@@ -2,9 +2,13 @@
 #include "Droplet.h"
 #include "MicroBit.h"
 
+using namespace codal;
+
 extern MicroBit uBit;
 
-DropletScheduler::DropletScheduler()
+DropletScheduler *DropletScheduler::instance = NULL;
+
+DropletScheduler::DropletScheduler(Timer &timer) : timer(timer)
 {
     for (int i = 0; i < MICROBIT_DROPLET_ADVERTISEMENT_SLOTS; i++)
     {
@@ -15,6 +19,18 @@ DropletScheduler::DropletScheduler()
     for (int i = MICROBIT_DROPLET_ADVERTISEMENT_SLOTS; i < MICROBIT_DROPLET_SLOTS; i++)
     {
         slots[i].flags |= MICROBIT_DROPLET_FREE;
+    }
+
+    instance = this;
+}
+
+void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
+{
+    DropletSlot slot = slots[buffer->slotIdentifier];
+
+    if (slot.deviceIdentifier != buffer->deviceIdentifier)
+    {
+        slot.errors++;
     }
 }
 
@@ -42,4 +58,9 @@ void DropletScheduler::markSlotAsTaken(uint8_t id)
 bool DropletScheduler::isNextSlotMine()
 {
     return slots[(currentSlot + 1) % MICROBIT_DROPLET_SLOTS].deviceIdentifier == uBit.getSerialNumber();
+}
+
+void DropletScheduler::incrementError(uint8_t slotId)
+{
+    slots[slotId].errors++;
 }

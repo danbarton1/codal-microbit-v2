@@ -34,6 +34,7 @@ Copyright (c) 2016 British Broadcasting Corporation.
 #include "nrf.h"
 #include "DropletEvent.h"
 #include "MicroBit.h"
+#include "DropletScheduler.h"
 
 using namespace codal;
 
@@ -107,35 +108,6 @@ void onInitialiseEvent(MicroBitEvent e)
 // TODO: It seems like the init method never gets called, I think it has something to do with this
 extern "C" void RADIO_IRQHandler(void)
 {
-
-    /*
-    NRF_RADIO->EVENTS_END = 0;
-
-    if (NRF_RADIO->CRCSTATUS == 1)
-    {
-        int sample = (int)NRF_RADIO->RSSISAMPLE;
-        DropletFrameBuffer *buffer = Droplet::instance->getRxBuf();
-        NRF_RADIO->PACKETPTR = (uint32_t)buffer;
-
-        // Associate this packet's rssi value with the data just
-        // transferred by DMA receive
-        Droplet::instance->setRSSI(-sample);
-
-        // Now move on to the next buffer, if possible.
-        // The queued packet will get the rssi value set above.
-        Droplet::instance->queueRxBuf();
-    }
-    else
-    {
-        Droplet::instance->setRSSI(0);
-    }
-
-    NRF_RADIO->TASKS_START = 1;
-*/
-    // DMESG("Radio Handler");
-    DropletFrameBuffer *buffer = Droplet::instance->getRxBuf();
-    // Set the new buffer for DMA
- 
     if(NRF_RADIO->EVENTS_READY)
     {
         NRF_RADIO->EVENTS_READY = 0;
@@ -143,6 +115,8 @@ extern "C" void RADIO_IRQHandler(void)
         // Start listening and wait for the END event
         NRF_RADIO->TASKS_START = 1;
     }
+
+    DropletFrameBuffer *buffer = Droplet::instance->getRxBuf();
 
     if(NRF_RADIO->EVENTS_END)
     {
@@ -158,69 +132,19 @@ extern "C" void RADIO_IRQHandler(void)
             // Now move on to the next buffer, if possible.
             // The queued packet will get the rssi value set above.
             Droplet::instance->queueRxBuf();
-           
+
+            // Set the new buffer for DMA
             NRF_RADIO->PACKETPTR = (uint32_t) buffer;
-
-            DMESG("rh ttl: %d", buffer->ttl);
-
-            buffer->ttl--;
-
-            // Forwarding packet
-            if (buffer->ttl > 0)
-            {
-                // Firstly, disable the Radio interrupt. We want to wait until the trasmission completes.
-                // NVIC_DisableIRQ(RADIO_IRQn);
-
-                // Turn off the transceiver.
-                NRF_RADIO->EVENTS_DISABLED = 0;
-                NRF_RADIO->TASKS_DISABLE = 1;
-                while(NRF_RADIO->EVENTS_DISABLED == 0);
-
-                // Configure the radio to send the buffer provided.
-                // NRF_RADIO->PACKETPTR = (uint32_t) buffer;
-
-                // Turn on the transmitter, and wait for it to signal that it's ready to use.
-                NRF_RADIO->EVENTS_READY = 0;
-                NRF_RADIO->TASKS_TXEN = 1;
-                while (NRF_RADIO->EVENTS_READY == 0);
-
-                // Start transmission and wait for end of packet.
-                NRF_RADIO->TASKS_START = 1;
-                NRF_RADIO->EVENTS_END = 0;
-                while(NRF_RADIO->EVENTS_END == 0);
-
-                // Return the radio to using the default receive buffer
-                NRF_RADIO->PACKETPTR = (uint32_t) Droplet::instance->getRxBuf();
-
-               
-                // NRF_RADIO->TASKS_START = 1;
-
-                // Re-enable the Radio interrupt.
-                // NVIC_ClearPendingIRQ(RADIO_IRQn);
-                // NVIC_EnableIRQ(RADIO_IRQn);
-                // DMESG("RADIO_IRQHandler - ttl: %d", buffer->ttl);
-            }
         }
         else
         {
-            Droplet::instance->setRSSI(0);
+            Droplet::instance->setRSSI(0); 
+            DropletScheduler::instance->incrementError(buffer->slotIdentifier);
         }
-
-         // Turn off the transmitter.
-        NRF_RADIO->EVENTS_DISABLED = 0;
-        NRF_RADIO->TASKS_DISABLE = 1;
-        while(NRF_RADIO->EVENTS_DISABLED == 0);
-
-        // Start listening for the next packet
-        NRF_RADIO->EVENTS_READY = 0;
-        NRF_RADIO->TASKS_RXEN = 1;
-        while(NRF_RADIO->EVENTS_READY == 0);
-
-        NRF_RADIO->EVENTS_END = 0;
 
         // Start listening and wait for the END event
         NRF_RADIO->TASKS_START = 1;
-    } 
+    }
 } 
 
 /**
