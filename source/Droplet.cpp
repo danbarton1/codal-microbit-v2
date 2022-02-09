@@ -155,7 +155,7 @@ extern "C" void RADIO_IRQHandler(void)
   * @note This class is demand activated, as a result most resources are only
   *       committed if send/recv or event registrations calls are made.
  */
-Droplet::Droplet(Timer &timer, uint16_t id) : timer(timer), datagram(*this), event (*this), clock(timer)
+Droplet::Droplet(Timer &timer, uint16_t id) : timer(timer), datagram(*this), event (*this), clock(timer), scheduler(timer)
 {
     this->id = id;
     this->status = 0;

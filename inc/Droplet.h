@@ -39,6 +39,7 @@ namespace codal
 #include "DropletEvent.h"
 #include "Timer.h"
 #include "DropletNetworkClock.h"
+#include "DropletScheduler.h"
 
 /**
  * Provides a simple broadcast radio abstraction, built upon the raw nrf51822 RADIO module.
@@ -144,6 +145,7 @@ namespace codal
         DropletDatagram   datagram;   // A simple datagram service.
         DropletEvent      event;      // A simple event handling service.
         DropletNetworkClock clock;    // A distributed network clock
+        DropletScheduler scheduler;   // A simple scheduler, should used along side the clock for synchronised results
         static Droplet    *instance;  // A singleton reference, used purely by the interrupt service routine.
 
         /**
