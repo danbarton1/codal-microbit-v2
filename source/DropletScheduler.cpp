@@ -10,9 +10,11 @@ extern MicroBit uBit;
 
 DropletScheduler *DropletScheduler::instance = NULL;
 
-void experiationCounterEvent(MicroBitEvent e)
+void onExpirationCounterEvent(MicroBitEvent e)
 {
     DropletSlot *p = DropletScheduler::instance->getSlots();
+
+    // TODO: Set i as MICROBIT_DROPLET_ADVERTISEMENT_SLOTS
 
     for (int i = 0; i < MICROBIT_DROPLET_SLOTS; i++, p++)
     {
@@ -37,6 +39,9 @@ DropletScheduler::DropletScheduler(Timer &timer) : timer(timer)
     }
 
     instance = this;
+
+    this->timer.eventEvery(1000, DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT);
+    uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT, onExpirationCounterEvent);
 }
 
 void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
