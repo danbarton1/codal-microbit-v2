@@ -42,6 +42,17 @@ void DropletNetworkClock::updateTime(uint32_t packetSendTime)
 
     // Current time
     // Packet send time
+
+    // This method should not be called after packet 0 for each slot
+
+    // The packet send time is the time from the first micro:bit. It should be sent at the very start of the slot (time 0)
+    // Therefore, we can use this time to sync our clock 
+    // Could be worth calculating the average drift
+    // So, keep a total of the difference and the number of times it has been calculated
+    // Total difference += (packet send time - local slot start time)
+    // Average drift = (difference) / (times)
+    // synced time =  
+    // Get 
     
     /*uint32_t estimatedCurrentSlotStartTime = ((uint64_t)packetSendTime + nextSlotTime - MICROBIT_DROPLET_SLOT_DURATION * MILLISECONDS_TO_NANO) / 2;
     uint32_t estimatedNextSlotStartTime = ((uint64_t)packetSendTime + nextSlotTime + MICROBIT_DROPLET_SLOT_DURATION * MILLISECONDS_TO_NANO) / 2;
