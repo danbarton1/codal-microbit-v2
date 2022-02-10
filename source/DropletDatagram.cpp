@@ -190,7 +190,7 @@ void DropletDatagram::networkDiscovery(DropletFrameBuffer *packet)
         DMESG("Initialisation complete");
         Droplet::instance->setDropletStatus(DropletStatus::Discovery);
         Droplet::instance->setInitialSlotId(slotId);
-        DropletNetworkClock::instance->init(packet->startTime);
+        //DropletNetworkClock::instance->init(packet->startTime);
         DMESG("Entered discovery mode");
         // TODO: Synchronise to the network clock
         //uint8_t hops = packet->initialTtl - packet->ttl;

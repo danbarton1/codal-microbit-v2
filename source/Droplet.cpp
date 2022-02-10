@@ -89,7 +89,7 @@ void printState(int s)
             DMESG("State: RX");
             break;
         case 4:
-            DMESG("State: RXDISABLED");
+            DMESG("State: RXDISABLE");
             break;
         case 9:
             DMESG("State: TXRU");
@@ -101,7 +101,7 @@ void printState(int s)
             DMESG("State: TX");
             break;
         case 12:
-            DMESG("State: TXDISABLED");
+            DMESG("State: TXDISABLE");
             break;
     }
 }
@@ -143,6 +143,8 @@ extern "C" void RADIO_IRQHandler(void)
 {
     DMESG("IRQ");
 
+    DropletFrameBuffer *buffer = Droplet::instance->getRxBuf();
+
     if(NRF_RADIO->EVENTS_READY)
     {
         NRF_RADIO->EVENTS_READY = 0;
@@ -180,9 +182,51 @@ extern "C" void RADIO_IRQHandler(void)
         NRF_RADIO->TASKS_START = 1;
     }
 
-    printState(NRF_RADIO->STATE);
-    // The radio is a state machine
-    // 
+    DMESG("ttl: %d", buffer->ttl);
+    buffer->ttl--;
+
+    if (buffer->ttl <= 0) 
+        return;
+
+    //  TASKS_START 
+    // Use this to hopefully (!) send the packet
+
+    printState(NRF_RADIO->STATE); // RX
+    // Turn off the transceiver.
+    NRF_RADIO->EVENTS_DISABLED = 0;
+    NRF_RADIO->TASKS_DISABLE = 1;
+    printState(NRF_RADIO->STATE); // RXDISABLE
+    while(NRF_RADIO->EVENTS_DISABLED == 0);
+    printState(NRF_RADIO->STATE); // Disabled
+    NRF_RADIO->PACKETPTR = (uint32_t)buffer;
+
+    NRF_RADIO->EVENTS_READY = 0;
+    NRF_RADIO->TASKS_TXEN = 1;
+    printState(NRF_RADIO->STATE); // TXRU
+    while (NRF_RADIO->EVENTS_READY == 0);
+    printState(NRF_RADIO->STATE); // TXIDLE
+    NRF_RADIO->EVENTS_END = 0;
+    NRF_RADIO->TASKS_START = 1;
+    while (NRF_RADIO->EVENTS_END == 0);
+    // Return the radio to using the default receive buffer
+    NRF_RADIO->PACKETPTR = (uint32_t)Droplet::instance->getRxBuf();
+
+    printState(NRF_RADIO->STATE); // TX
+    // Turn off the transmitter.
+    NRF_RADIO->EVENTS_DISABLED = 0;
+    NRF_RADIO->TASKS_DISABLE = 1;
+    printState(NRF_RADIO->STATE); // TXDISABLE
+    while(NRF_RADIO->EVENTS_DISABLED == 0);
+    printState(NRF_RADIO->STATE); // Disabled
+    // Start listening for the next packet
+    NRF_RADIO->EVENTS_READY = 0;
+    NRF_RADIO->TASKS_RXEN = 1;
+    while(NRF_RADIO->EVENTS_READY == 0);
+    printState(NRF_RADIO->STATE); // RXIDLE
+    NRF_RADIO->EVENTS_END = 0;
+    NRF_RADIO->TASKS_START = 1;
+
+    printState(NRF_RADIO->STATE); // RX
 } 
 
 /**
