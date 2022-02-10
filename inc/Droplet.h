@@ -144,8 +144,8 @@ namespace codal
     public:
         DropletDatagram   datagram;   // A simple datagram service.
         DropletEvent      event;      // A simple event handling service.
-        DropletNetworkClock clock;    // A distributed network clock
-        DropletScheduler scheduler;   // A simple scheduler, should used along side the clock for synchronised results
+        //DropletNetworkClock clock;    // A distributed network clock
+        //DropletScheduler scheduler;   // A simple scheduler, should used along side the clock for synchronised results
         static Droplet    *instance;  // A singleton reference, used purely by the interrupt service routine.
 
         /**

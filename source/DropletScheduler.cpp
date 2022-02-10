@@ -40,8 +40,8 @@ DropletScheduler::DropletScheduler(Timer &timer) : timer(timer)
 
     instance = this;
 
-    this->timer.eventEvery(1000, DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT);
-    uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT, onExpirationCounterEvent);
+    //this->timer.eventEvery(1000, DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT);
+    // uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT, onExpirationCounterEvent);
 }
 
 void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)

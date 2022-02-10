@@ -69,9 +69,42 @@ Droplet* Droplet::instance = NULL;
 
 #define DROPLET_RECEIVE 1
 #define DROPLET_TRANSMIT 2
-#define DROPLET_FORWARD 3
 
 volatile uint8_t radioState = DROPLET_RECEIVE; 
+
+void printState(int s)
+{
+    switch (s)
+    {
+        case 0:
+            DMESG("State: Disabled");
+            break;
+        case 1:
+            DMESG("State: RXRU");
+            break;
+        case 2:
+            DMESG("State: RXIDLE");
+            break;
+        case 3:
+            DMESG("State: RX");
+            break;
+        case 4:
+            DMESG("State: RXDISABLED");
+            break;
+        case 9:
+            DMESG("State: TXRU");
+            break;
+        case 10:
+            DMESG("State: TXIDLE");
+            break;
+        case 11:
+            DMESG("State: TX");
+            break;
+        case 12:
+            DMESG("State: TXDISABLED");
+            break;
+    }
+}
 
 void onInitialiseEvent(MicroBitEvent e)
 {
@@ -108,6 +141,8 @@ void onInitialiseEvent(MicroBitEvent e)
 // TODO: It seems like the init method never gets called, I think it has something to do with this
 extern "C" void RADIO_IRQHandler(void)
 {
+    DMESG("IRQ");
+
     if(NRF_RADIO->EVENTS_READY)
     {
         NRF_RADIO->EVENTS_READY = 0;
@@ -116,8 +151,7 @@ extern "C" void RADIO_IRQHandler(void)
         NRF_RADIO->TASKS_START = 1;
     }
 
-    DropletFrameBuffer *buffer = Droplet::instance->getRxBuf();
-
+    // Receive packet
     if(NRF_RADIO->EVENTS_END)
     {
         NRF_RADIO->EVENTS_END = 0;
@@ -134,17 +168,21 @@ extern "C" void RADIO_IRQHandler(void)
             Droplet::instance->queueRxBuf();
 
             // Set the new buffer for DMA
-            NRF_RADIO->PACKETPTR = (uint32_t) buffer;
+            NRF_RADIO->PACKETPTR = (uint32_t)Droplet::instance->getRxBuf();
         }
         else
         {
             Droplet::instance->setRSSI(0); 
-            DropletScheduler::instance->incrementError(buffer->slotIdentifier);
+            // DropletScheduler::instance->incrementError(buffer->slotIdentifier);
         }
 
         // Start listening and wait for the END event
         NRF_RADIO->TASKS_START = 1;
     }
+
+    printState(NRF_RADIO->STATE);
+    // The radio is a state machine
+    // 
 } 
 
 /**
@@ -155,7 +193,7 @@ extern "C" void RADIO_IRQHandler(void)
   * @note This class is demand activated, as a result most resources are only
   *       committed if send/recv or event registrations calls are made.
  */
-Droplet::Droplet(Timer &timer, uint16_t id) : timer(timer), datagram(*this), event (*this), clock(timer), scheduler(timer)
+Droplet::Droplet(Timer &timer, uint16_t id) : timer(timer), datagram(*this), event (*this)//, clock(timer), scheduler(timer)
 {
     this->id = id;
     this->status = 0;
