@@ -1,8 +1,6 @@
 #include "DropletScheduler.h"
 #include "Droplet.h"
 #include "MicroBit.h"
-#include <iterator>
-
 
 using namespace codal;
 

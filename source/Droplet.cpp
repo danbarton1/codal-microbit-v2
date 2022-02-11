@@ -125,6 +125,8 @@ void onInitialiseEvent(MicroBitEvent e)
     buffer->ttl = MICROBIT_DROPLET_INITIALISATION_TTL;
     buffer->startTime = uBit.systemTime();
 
+    DMESG("oninitevent ttl: %d", buffer->ttl);
+
     // TODO: Keep sending
     int result = Droplet::instance->send(buffer);
 
@@ -141,10 +143,6 @@ void onInitialiseEvent(MicroBitEvent e)
 // TODO: It seems like the init method never gets called, I think it has something to do with this
 extern "C" void RADIO_IRQHandler(void)
 {
-    DMESG("IRQ");
-
-    DropletFrameBuffer *buffer = Droplet::instance->getRxBuf();
-
     if(NRF_RADIO->EVENTS_READY)
     {
         NRF_RADIO->EVENTS_READY = 0;
@@ -182,51 +180,63 @@ extern "C" void RADIO_IRQHandler(void)
         NRF_RADIO->TASKS_START = 1;
     }
 
-    DMESG("ttl: %d", buffer->ttl);
-    buffer->ttl--;
+    
+    //DMESG("ttl: %d", buffer->ttl);
+    //ropletFrameBuffer *buffer = Droplet::instance->recv();
+    //DropletFrameBuffer *buffer = Droplet::instance->rxQueue->next;
+    //DMESG("Radio_IRQHandler ttl: %d", buffer->ttl);
 
-    if (buffer->ttl <= 0) 
-        return;
+    //buffer->ttl--;
+
+    //if (buffer->ttl < 0) 
+      //  return;
+
+    //Droplet::instance->send(buffer);
 
     //  TASKS_START 
     // Use this to hopefully (!) send the packet
+    /*
+    DMESG("Transmitting... %d", buffer->ttl);
 
-    printState(NRF_RADIO->STATE); // RX
+    //printState(NRF_RADIO->STATE); // RX
     // Turn off the transceiver.
     NRF_RADIO->EVENTS_DISABLED = 0;
     NRF_RADIO->TASKS_DISABLE = 1;
-    printState(NRF_RADIO->STATE); // RXDISABLE
+    //printState(NRF_RADIO->STATE); // RXDISABLE
     while(NRF_RADIO->EVENTS_DISABLED == 0);
-    printState(NRF_RADIO->STATE); // Disabled
+    //printState(NRF_RADIO->STATE); // Disabled
     NRF_RADIO->PACKETPTR = (uint32_t)buffer;
 
     NRF_RADIO->EVENTS_READY = 0;
     NRF_RADIO->TASKS_TXEN = 1;
-    printState(NRF_RADIO->STATE); // TXRU
+    //printState(NRF_RADIO->STATE); // TXRU
     while (NRF_RADIO->EVENTS_READY == 0);
-    printState(NRF_RADIO->STATE); // TXIDLE
-    NRF_RADIO->EVENTS_END = 0;
+    //printState(NRF_RADIO->STATE); // TXIDLE
     NRF_RADIO->TASKS_START = 1;
-    while (NRF_RADIO->EVENTS_END == 0);
+    NRF_RADIO->EVENTS_END = 0;
+    //printstate(NRF_RADIO->STATE); // TX
+    while(NRF_RADIO->EVENTS_END == 0);
     // Return the radio to using the default receive buffer
     NRF_RADIO->PACKETPTR = (uint32_t)Droplet::instance->getRxBuf();
 
-    printState(NRF_RADIO->STATE); // TX
+    
     // Turn off the transmitter.
     NRF_RADIO->EVENTS_DISABLED = 0;
     NRF_RADIO->TASKS_DISABLE = 1;
-    printState(NRF_RADIO->STATE); // TXDISABLE
+    //printState(NRF_RADIO->STATE); // TXDISABLE
     while(NRF_RADIO->EVENTS_DISABLED == 0);
-    printState(NRF_RADIO->STATE); // Disabled
+    //printState(NRF_RADIO->STATE); // Disabled
     // Start listening for the next packet
     NRF_RADIO->EVENTS_READY = 0;
     NRF_RADIO->TASKS_RXEN = 1;
     while(NRF_RADIO->EVENTS_READY == 0);
-    printState(NRF_RADIO->STATE); // RXIDLE
+    //printState(NRF_RADIO->STATE); // RXIDLE
     NRF_RADIO->EVENTS_END = 0;
     NRF_RADIO->TASKS_START = 1;
 
-    printState(NRF_RADIO->STATE); // RX
+    //printState(NRF_RADIO->STATE); // RX 
+    
+    DMESG("Transmitted!"); */
 } 
 
 /**
@@ -237,7 +247,7 @@ extern "C" void RADIO_IRQHandler(void)
   * @note This class is demand activated, as a result most resources are only
   *       committed if send/recv or event registrations calls are made.
  */
-Droplet::Droplet(Timer &timer, uint16_t id) : timer(timer), datagram(*this), event (*this)//, clock(timer), scheduler(timer)
+Droplet::Droplet(Timer &timer, uint16_t id) : timer(timer), datagram(*this), event (*this), clock(timer), scheduler(timer)
 {
     this->id = id;
     this->status = 0;
@@ -249,6 +259,10 @@ Droplet::Droplet(Timer &timer, uint16_t id) : timer(timer), datagram(*this), eve
     this->dropletStatus = DropletStatus::Initialisation;
 
     instance = this;
+
+    NVIC_SetPriority(RADIO_IRQn, 0);
+	NVIC_ClearPendingIRQ(RADIO_IRQn);
+	NVIC_EnableIRQ(RADIO_IRQn);
 }
 
 void Droplet::checkSlotWindow(uint8_t slotId)
@@ -663,7 +677,6 @@ DropletFrameBuffer* Droplet::recv()
  */
 int Droplet::send(DropletFrameBuffer *buffer)
 {
-    DMESG("Droplet::send");
     if (ble_running())
         return DEVICE_NOT_SUPPORTED;
 
