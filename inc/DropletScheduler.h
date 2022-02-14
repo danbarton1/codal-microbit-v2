@@ -11,6 +11,8 @@
 
 #define MICROBIT_DROPLET_EXPIRATION 5
 
+#define MICROBIT_DROPLET_MAX_FRAMES 10
+
 namespace codal
 {
     struct DropletSlot;
@@ -42,6 +44,8 @@ namespace codal
         uint8_t currentSlot;
         uint8_t currentFrame;
         Timer &timer;
+        uint8_t maxFrameId;
+       // DropletFrameBuffer frames[MICROBIT_DROPLET_MAX_FRAMES];
     public:
         DropletScheduler(Timer &timer);
         uint8_t getSlotsToSleepFor();

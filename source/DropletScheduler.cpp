@@ -14,10 +14,24 @@ void onNextSlotEvent(MicroBitEvent e)
     id = (id + 1) % MICROBIT_DROPLET_SLOTS;
     DropletScheduler::instance->setCurrentSlot(id);
 
-    if (!Droplet::instance->isEnabled())
+    // Only do this if the slot if not free
+    DropletSlot slot = DropletScheduler::instance->getSlots()[id];
+
+    if (!slot.unused)
     {
-        Droplet::instance->enable();
+        if (!Droplet::instance->isEnabled())
+        {
+            Droplet::instance->enable();
+        }
     }
+    else
+    {
+        if (!Droplet::instance->isEnabled())
+        {
+            Droplet::instance->disable();
+        }
+    }
+
 }
 
 void onExpirationCounterEvent(MicroBitEvent e)
@@ -59,10 +73,14 @@ DropletScheduler::DropletScheduler(Timer &timer) : currentFrame(0), timer(timer)
 
     this->timer.eventEvery(1000, DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT);
     uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT, onExpirationCounterEvent);
+    uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_SCHEDULE_EVENT, onNextSlotEvent);
 }
 
 void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
 {
+    // TODO: check if this is the first packet received for this slot
+    // TODO: If it is, send the start time to the network clock
+    // TODO: Then we can sort out when the next slot is going to happen
     DropletSlot slot = slots[buffer->slotIdentifier];
 
     if (slot.deviceIdentifier != buffer->deviceIdentifier)
@@ -82,6 +100,7 @@ void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
     {
         // We have received the last packet, so shut down the radio
         Droplet::instance->disable();
+        maxFrameId = frameId;
     }
 }
 

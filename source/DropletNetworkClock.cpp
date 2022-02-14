@@ -11,16 +11,9 @@ extern MicroBit uBit;
 
 DropletNetworkClock* DropletNetworkClock::instance = nullptr;
 
-void timerEveryUsEvent(MicroBitEvent e)
-{
-    //DropletNetworkClock::instance->setTime(0);
-    DMESG("Timer network clock event");
-}
-
 DropletNetworkClock::DropletNetworkClock(Timer &timer) : timer(timer)
 {
     instance = this;
-    uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_SCHEDULE_EVENT, timerEveryUsEvent);
 }
 
 void DropletNetworkClock::init(uint32_t t)
