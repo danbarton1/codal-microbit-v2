@@ -19,6 +19,12 @@ void onExpirationCounterEvent(MicroBitEvent e)
         if ((p->flags & MICROBIT_DROPLET_ADVERT) != MICROBIT_DROPLET_ADVERT)
         {
             p->expiration--;
+
+            if (p->expiration <= 0)
+            {
+                p->unused = true;
+                p->flags |= MICROBIT_DROPLET_FREE;
+            }
         }
     }
 }
@@ -71,6 +77,8 @@ void DropletScheduler::markSlotAsTaken(uint8_t id)
 {
     // TODO: Return error if id is out of range
     slots[MICROBIT_DROPLET_ADVERTISEMENT_SLOTS + id - 1].unused = false;
+    // TODO: Mark slot as not free
+    slots[MICROBIT_DROPLET_ADVERTISEMENT_SLOTS + id - 1].flags &= ~MICROBIT_DROPLET_FREE; 
 }
 
 bool DropletScheduler::isNextSlotMine()
@@ -78,9 +86,9 @@ bool DropletScheduler::isNextSlotMine()
     return slots[(currentSlot + 1) % MICROBIT_DROPLET_SLOTS].deviceIdentifier == uBit.getSerialNumber();
 }
 
-void DropletScheduler::incrementError(uint8_t slotId)
+void DropletScheduler::incrementError()
 {
-    slots[slotId].errors++;
+    slots[currentSlot].errors++;
 }
 
 DropletSlot *DropletScheduler::getSlots()

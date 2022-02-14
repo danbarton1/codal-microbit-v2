@@ -140,9 +140,12 @@ void onInitialiseEvent(MicroBitEvent e)
         DMESG("OK");
 }
 
-// TODO: It seems like the init method never gets called, I think it has something to do with this
+uint8_t send = 0;
+
 extern "C" void RADIO_IRQHandler(void)
 {
+    //DMESG("IRQ");
+ 
     if(NRF_RADIO->EVENTS_READY)
     {
         NRF_RADIO->EVENTS_READY = 0;
@@ -152,11 +155,13 @@ extern "C" void RADIO_IRQHandler(void)
     }
 
     // Receive packet
+    
     if(NRF_RADIO->EVENTS_END)
     {
         NRF_RADIO->EVENTS_END = 0;
         if(NRF_RADIO->CRCSTATUS == 1)
         {
+            //printState(NRF_RADIO->STATE);
             int sample = (int)NRF_RADIO->RSSISAMPLE;
 
             // Associate this packet's rssi value with the data just
@@ -169,17 +174,61 @@ extern "C" void RADIO_IRQHandler(void)
 
             // Set the new buffer for DMA
             NRF_RADIO->PACKETPTR = (uint32_t)Droplet::instance->getRxBuf();
+            //NRF_RADIO->PACKETPTR = (uint32_t)buffer;
+            //while(NRF_RADIO->EVENTS_END == 0);
+            //printState(NRF_RADIO->STATE);
         }
         else
         {
             Droplet::instance->setRSSI(0); 
-            // DropletScheduler::instance->incrementError(buffer->slotIdentifier);
+            DropletScheduler::instance->incrementError();
         }
 
         // Start listening and wait for the END event
         NRF_RADIO->TASKS_START = 1;
     }
+        /*
+    printState(NRF_RADIO->STATE);
 
+    DropletFrameBuffer *buffer = new DropletFrameBuffer();
+
+    // RXIDLE
+    // TASKS_START
+    // RX
+    // DISABLED
+
+    DMESG("Receiving...");
+
+    //NRF_RADIO->PACKETPTR = (uint32_t)buffer;
+    //NRF_RADIO->EVENTS_DISABLED = 0;
+    //NRF_RADIO->TASKS_DISABLE = 1;
+    //printState(NRF_RADIO->STATE); 
+    //while(NRF_RADIO->EVENTS_DISABLED == 0);
+
+    //DMESG("Buffer: %d", buffer->ttl--);
+
+    
+    
+
+   
+    NRF_RADIO->EVENTS_READY = 0;
+    NRF_RADIO->TASKS_RXEN = 1;
+    while (NRF_RADIO->EVENTS_READY == 0);
+
+    NRF_RADIO->EVENTS_END = 0;
+    NRF_RADIO->TASKS_START = 1;
+    while (NRF_RADIO->EVENTS_END == 0);
+
+    if (NRF_RADIO->CRCSTATUS == 1)
+    {
+        NRF_RADIO->PACKETPTR = (uint32_t)buffer;
+    }
+
+    NRF_RADIO->EVENTS_DISABLED = 0;
+    NRF_RADIO->TASKS_DISABLE = 1;
+    while (NRF_RADIO->EVENTS_DISABLED == 0);
+
+    DMESG("Received!"); 
     
     //DMESG("ttl: %d", buffer->ttl);
     //ropletFrameBuffer *buffer = Droplet::instance->recv();
@@ -195,26 +244,43 @@ extern "C" void RADIO_IRQHandler(void)
 
     //  TASKS_START 
     // Use this to hopefully (!) send the packet
-    /*
-    DMESG("Transmitting... %d", buffer->ttl);
+    
 
-    //printState(NRF_RADIO->STATE); // RX
+
+    if (send > 2)
+        return;
+
+    send++;
+
+    DropletFrameBuffer *dfb = new DropletFrameBuffer();
+    dfb->length = MICROBIT_DROPLET_HEADER_SIZE - 1;
+    dfb->flags |= 1;
+    dfb->slotIdentifier = 0;
+    dfb->deviceIdentifier = uBit.getSerialNumber();
+    dfb->protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
+    dfb->initialTtl = MICROBIT_DROPLET_INITIALISATION_TTL;
+    dfb->ttl = send;
+    dfb->startTime = uBit.systemTime();
+
+    DMESG("Transmitting... %d", send);
+
+    printState(NRF_RADIO->STATE); // RX
     // Turn off the transceiver.
     NRF_RADIO->EVENTS_DISABLED = 0;
     NRF_RADIO->TASKS_DISABLE = 1;
-    //printState(NRF_RADIO->STATE); // RXDISABLE
+    printState(NRF_RADIO->STATE); // RXDISABLE
     while(NRF_RADIO->EVENTS_DISABLED == 0);
-    //printState(NRF_RADIO->STATE); // Disabled
-    NRF_RADIO->PACKETPTR = (uint32_t)buffer;
+    printState(NRF_RADIO->STATE); // Disabled
+    NRF_RADIO->PACKETPTR = (uint32_t)dfb;
 
     NRF_RADIO->EVENTS_READY = 0;
     NRF_RADIO->TASKS_TXEN = 1;
-    //printState(NRF_RADIO->STATE); // TXRU
+    printState(NRF_RADIO->STATE); // TXRU
     while (NRF_RADIO->EVENTS_READY == 0);
-    //printState(NRF_RADIO->STATE); // TXIDLE
+    printState(NRF_RADIO->STATE); // TXIDLE
     NRF_RADIO->TASKS_START = 1;
     NRF_RADIO->EVENTS_END = 0;
-    //printstate(NRF_RADIO->STATE); // TX
+    printState(NRF_RADIO->STATE); // TX
     while(NRF_RADIO->EVENTS_END == 0);
     // Return the radio to using the default receive buffer
     NRF_RADIO->PACKETPTR = (uint32_t)Droplet::instance->getRxBuf();
@@ -223,20 +289,21 @@ extern "C" void RADIO_IRQHandler(void)
     // Turn off the transmitter.
     NRF_RADIO->EVENTS_DISABLED = 0;
     NRF_RADIO->TASKS_DISABLE = 1;
-    //printState(NRF_RADIO->STATE); // TXDISABLE
+    printState(NRF_RADIO->STATE); // TXDISABLE
     while(NRF_RADIO->EVENTS_DISABLED == 0);
-    //printState(NRF_RADIO->STATE); // Disabled
+    printState(NRF_RADIO->STATE); // Disabled
     // Start listening for the next packet
     NRF_RADIO->EVENTS_READY = 0;
     NRF_RADIO->TASKS_RXEN = 1;
     while(NRF_RADIO->EVENTS_READY == 0);
-    //printState(NRF_RADIO->STATE); // RXIDLE
-    NRF_RADIO->EVENTS_END = 0;
-    NRF_RADIO->TASKS_START = 1;
+    printState(NRF_RADIO->STATE); // RXIDLE
+    //NRF_RADIO->EVENTS_END = 0;
+    //NRF_RADIO->TASKS_START = 1;
 
     //printState(NRF_RADIO->STATE); // RX 
     
-    DMESG("Transmitted!"); */
+    DMESG("Transmitted!"); 
+    */
 } 
 
 /**

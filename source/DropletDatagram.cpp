@@ -216,9 +216,11 @@ void DropletDatagram::networkDiscovery(DropletFrameBuffer *packet)
  */
 void DropletDatagram::packetReceived()
 {
-    DMESG("Packet received");
+    
     DropletFrameBuffer *packet = radio.recv();
     int queueDepth = 0;
+
+    DMESG("Packet received %d ttl: %d", packet->flags, packet->ttl);
 
     // We add to the tail of the queue to preserve causal ordering.
     packet->next = NULL;

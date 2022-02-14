@@ -44,7 +44,7 @@ namespace codal
         uint8_t getSlotsToSleepFor();
         void markSlotAsTaken(uint8_t id);
         bool isNextSlotMine();
-        void incrementError(uint8_t slotId);
+        void incrementError();
         void analysePacket(DropletFrameBuffer *buffer);
         DropletSlot * getSlots();
         static DropletScheduler *instance;
