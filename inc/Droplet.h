@@ -162,7 +162,7 @@ namespace codal
         /**
              * 
          */ 
-        void checkSlotWindow(uint8_t slotId);
+        bool checkSlotWindow(uint8_t slotId);
 
         /**
              * Change the ttl of the radio packets
@@ -247,6 +247,8 @@ namespace codal
         uint8_t getInitialSlotId();
 
         Timer * getTimer();
+
+        bool isEnabled() const;
 
         /**
              * Initialises the radio for use as a multipoint sender/receiver

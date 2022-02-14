@@ -9,7 +9,7 @@ extern MicroBit uBit;
 
 #define MILLISECONDS_TO_NANO 1000
 
-DropletNetworkClock* DropletNetworkClock::instance = NULL;
+DropletNetworkClock* DropletNetworkClock::instance = nullptr;
 
 void timerEveryUsEvent(MicroBitEvent e)
 {
@@ -63,7 +63,7 @@ void DropletNetworkClock::updateTime(uint32_t packetSendTime)
     timer.eventEveryUs(timeUntilNextSlot, DEVICE_ID_RADIO, MICROBIT_DROPLET_SCHEDULE_EVENT); */
 }
 
-uint32_t DropletNetworkClock::getTime()
+uint32_t DropletNetworkClock::getTime() const
 {
     return time;
 }
@@ -71,4 +71,8 @@ uint32_t DropletNetworkClock::getTime()
 void DropletNetworkClock::setTime(uint32_t t)
 {
     time = t;
+}
+uint32_t DropletNetworkClock::getTimeUntilNextSlot() const
+{
+    return 0;
 }

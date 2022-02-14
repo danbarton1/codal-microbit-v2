@@ -22,7 +22,8 @@ namespace codal
         DropletNetworkClock(Timer &timer);
         void init(uint32_t t);
         void updateTime(uint32_t packetSendTime);
-        uint32_t getTime();
+        uint32_t getTime() const;
+        uint32_t getTimeUntilNextSlot() const;
         void setTime(uint32_t t);
     };
 }

@@ -24,15 +24,12 @@ Copyright (c) 2016 British Broadcasting Corporation.
             */
 
 #include <string>
-#include <sstream>
-#include <iostream>
 #include "Droplet.h"
 #include "MicroBitDevice.h"
 #include "CodalComponent.h"
 #include "ErrorNo.h"
 #include "CodalFiber.h"
 #include "nrf.h"
-#include "DropletEvent.h"
 #include "MicroBit.h"
 #include "DropletScheduler.h"
 
@@ -54,10 +51,10 @@ const uint8_t MICROBIT_RADIO_POWER_LEVEL[] = {0xD8, 0xD8, 0xEC, 0xF0, 0xF4, 0xF8
   * approach to efficient rebroadcast and network synchronisation would likely provide an effective future step.
   *
   * TODO: Meshing should also be considered - again a GLOSSY approach may be effective here, and highly complementary to
-  * the master/slave arachitecture of BLE.
+  * the master/slave architecture of BLE.
   *
   * TODO: This implementation may only operated whilst the BLE stack is disabled. The nrf51822 provides a timeslot API to allow
-  * BLE to cohabit with other protocols. Future work to allow this colocation would be benefical, and would also allow for the
+  * BLE to cohabit with other protocols. Future work to allow this collocation would be beneficial, and would also allow for the
   * creation of wireless BLE bridges.
   *
   * NOTE: This API does not contain any form of encryption, authentication or authorisation. Its purpose is solely for use as a
@@ -65,7 +62,7 @@ const uint8_t MICROBIT_RADIO_POWER_LEVEL[] = {0xD8, 0xD8, 0xEC, 0xF0, 0xF4, 0xF8
   * For serious applications, BLE should be considered a substantially more secure alternative.
  */
 
-Droplet* Droplet::instance = NULL;
+Droplet* Droplet::instance = nullptr;
 
 #define DROPLET_RECEIVE 1
 #define DROPLET_TRANSMIT 2
@@ -332,9 +329,9 @@ Droplet::Droplet(Timer &timer, uint16_t id) : timer(timer), datagram(*this), eve
 	NVIC_EnableIRQ(RADIO_IRQn);
 }
 
-void Droplet::checkSlotWindow(uint8_t slotId)
+bool Droplet::checkSlotWindow(uint8_t slotId)
 {
-
+    return scheduler.isSlotMine(slotId);
 }
 
 int Droplet::setTimeToLive(uint8_t ttl)
@@ -833,4 +830,8 @@ int Droplet::setSleep(bool doSleep)
     }
 
     return DEVICE_OK;
+}
+bool Droplet::isEnabled() const
+{
+    return (status & MICROBIT_RADIO_STATUS_INITIALISED) == MICROBIT_RADIO_STATUS_INITIALISED;
 }

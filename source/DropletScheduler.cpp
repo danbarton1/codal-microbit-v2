@@ -6,7 +6,19 @@ using namespace codal;
 
 extern MicroBit uBit;
 
-DropletScheduler *DropletScheduler::instance = NULL;
+DropletScheduler *DropletScheduler::instance = nullptr;
+
+void onNextSlotEvent(MicroBitEvent e)
+{
+    uint8_t id = DropletScheduler::instance->getCurrentSlot();
+    id = (id + 1) % MICROBIT_DROPLET_SLOTS;
+    DropletScheduler::instance->setCurrentSlot(id);
+
+    if (!Droplet::instance->isEnabled())
+    {
+        Droplet::instance->enable();
+    }
+}
 
 void onExpirationCounterEvent(MicroBitEvent e)
 {
@@ -24,12 +36,13 @@ void onExpirationCounterEvent(MicroBitEvent e)
             {
                 p->unused = true;
                 p->flags |= MICROBIT_DROPLET_FREE;
+                p->expiration = MICROBIT_DROPLET_EXPIRATION;
             }
         }
     }
 }
 
-DropletScheduler::DropletScheduler(Timer &timer) : timer(timer)
+DropletScheduler::DropletScheduler(Timer &timer) : currentFrame(0), timer(timer)
 {
     for (int i = 0; i < MICROBIT_DROPLET_ADVERTISEMENT_SLOTS; i++)
     {
@@ -44,8 +57,8 @@ DropletScheduler::DropletScheduler(Timer &timer) : timer(timer)
 
     instance = this;
 
-    //this->timer.eventEvery(1000, DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT);
-    // uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT, onExpirationCounterEvent);
+    this->timer.eventEvery(1000, DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT);
+    uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT, onExpirationCounterEvent);
 }
 
 void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
@@ -55,6 +68,20 @@ void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
     if (slot.deviceIdentifier != buffer->deviceIdentifier)
     {
         slot.errors++;
+    }
+
+    uint8_t frameId = buffer->frameIdentifier;
+
+    // TODO: Maybe not the best way to check for lost frames
+    if (frameId <= currentFrame)
+    {
+        
+    }
+
+    if ((buffer->flags & MICROBIT_DROPLET_DONE) == MICROBIT_DROPLET_DONE)
+    {
+        // We have received the last packet, so shut down the radio
+        Droplet::instance->disable();
     }
 }
 
@@ -81,6 +108,11 @@ void DropletScheduler::markSlotAsTaken(uint8_t id)
     slots[MICROBIT_DROPLET_ADVERTISEMENT_SLOTS + id - 1].flags &= ~MICROBIT_DROPLET_FREE; 
 }
 
+bool DropletScheduler::isSlotMine(uint8_t id)
+{
+    return slots[id].deviceIdentifier == uBit.getSerialNumber();
+}
+
 bool DropletScheduler::isNextSlotMine()
 {
     return slots[(currentSlot + 1) % MICROBIT_DROPLET_SLOTS].deviceIdentifier == uBit.getSerialNumber();
@@ -94,4 +126,12 @@ void DropletScheduler::incrementError()
 DropletSlot *DropletScheduler::getSlots()
 {
     return slots;
+}
+uint8_t DropletScheduler::getCurrentSlot() const
+{
+    return currentSlot;
+}
+void DropletScheduler::setCurrentSlot(uint8_t id)
+{
+    currentSlot = id;
 }
