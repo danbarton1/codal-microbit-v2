@@ -114,6 +114,8 @@ void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
 
         if (slotsToSleepFor > 0)
         {
+            uint32_t t = slotsToSleepFor * MICROBIT_DROPLET_SLOT_DURATION;
+            timer.eventAfter(t, DEVICE_ID_RADIO, MICROBIT_DROPLET_WAKE_UP_EVENT);
             Droplet::instance->disable();
         }
         
