@@ -81,11 +81,11 @@ void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
     // TODO: check if this is the first packet received for this slot
     // TODO: If it is, send the start time to the network clock
     // TODO: Then we can sort out when the next slot is going to happen
-    DropletSlot slot = slots[buffer->slotIdentifier];
+    DropletSlot *slot = &slots[buffer->slotIdentifier];
 
-    if (slot.deviceIdentifier != buffer->deviceIdentifier)
+    if (slot->deviceIdentifier != buffer->deviceIdentifier)
     {
-        slot.errors++;
+        slot->errors++;
     }
 
     uint8_t frameId = buffer->frameIdentifier;
