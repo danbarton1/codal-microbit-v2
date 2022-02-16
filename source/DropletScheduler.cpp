@@ -39,6 +39,8 @@ void onExpirationCounterEvent(MicroBitEvent e)
     DropletSlot *p = DropletScheduler::instance->getSlots();
 
     // TODO: Set i as MICROBIT_DROPLET_ADVERTISEMENT_SLOTS
+    // TODO: Only expiration-- if a packet has not been received
+    // TODO: If a packet has been received, set the expiration back to max
 
     for (int i = 0; i < MICROBIT_DROPLET_SLOTS; i++, p++)
     {
@@ -54,6 +56,11 @@ void onExpirationCounterEvent(MicroBitEvent e)
             }
         }
     }
+}
+
+void onRadioWakeUpEvent(MicroBitEvent e)
+{
+    Droplet::instance->enable();
 }
 
 DropletScheduler::DropletScheduler(Timer &timer) : currentFrame(0), timer(timer)
@@ -74,6 +81,7 @@ DropletScheduler::DropletScheduler(Timer &timer) : currentFrame(0), timer(timer)
     this->timer.eventEvery(1000, DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT);
     uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT, onExpirationCounterEvent);
     uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_SCHEDULE_EVENT, onNextSlotEvent);
+    uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_WAKE_UP_EVENT, onRadioWakeUpEvent);
 }
 
 void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
@@ -88,6 +96,8 @@ void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
         slot->errors++;
     }
 
+    slot->expiration = MICROBIT_DROPLET_EXPIRATION;
+
     uint8_t frameId = buffer->frameIdentifier;
 
     // TODO: Maybe not the best way to check for lost frames
@@ -99,7 +109,14 @@ void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
     if ((buffer->flags & MICROBIT_DROPLET_DONE) == MICROBIT_DROPLET_DONE)
     {
         // We have received the last packet, so shut down the radio
-        Droplet::instance->disable();
+        // TODO: Only do this if the next slot is empty
+        uint8_t slotsToSleepFor = getSlotsToSleepFor();
+
+        if (slotsToSleepFor > 0)
+        {
+            Droplet::instance->disable();
+        }
+        
         maxFrameId = frameId;
     }
 }
