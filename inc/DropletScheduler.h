@@ -13,6 +13,8 @@
 
 #define MICROBIT_DROPLET_MAX_FRAMES 10
 
+#define MICROBIT_DROPLET_PREPARATION_WINDOW_MICROSECONDS 1000
+
 namespace codal
 {
     struct DropletSlot;
@@ -29,7 +31,7 @@ namespace codal
         uint8_t expiration;
         uint8_t distance:4, flags:4;
         uint8_t errors;
-        bool unused;
+        bool unused; // TODO: Remove this field, shouldn't be needed
 
         DropletSlot() : unused(true)
         {

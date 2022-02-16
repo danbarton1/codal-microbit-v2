@@ -91,9 +91,11 @@ void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
     // TODO: Then we can sort out when the next slot is going to happen
     DropletSlot *slot = &slots[buffer->slotIdentifier];
 
+    // Invalid packet
     if (slot->deviceIdentifier != buffer->deviceIdentifier)
     {
         slot->errors++;
+        return;
     }
 
     slot->expiration = MICROBIT_DROPLET_EXPIRATION;
@@ -114,8 +116,10 @@ void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
 
         if (slotsToSleepFor > 0)
         {
-            uint32_t t = slotsToSleepFor * MICROBIT_DROPLET_SLOT_DURATION;
-            timer.eventAfter(t, DEVICE_ID_RADIO, MICROBIT_DROPLET_WAKE_UP_EVENT);
+            // TODO: Should be:
+            // TODO: timeToNextSlot + slotsToSleepFor * MICROBIT_DROPLET_SLOT_DURATION - preparationWindow
+            uint32_t t = (DropletNetworkClock::instance->getTime() + slotsToSleepFor * MICROBIT_DROPLET_SLOT_DURATION) * 1000 - MICROBIT_DROPLET_PREPARATION_WINDOW_MICROSECONDS;
+            timer.eventAfterUs(t, DEVICE_ID_RADIO, MICROBIT_DROPLET_WAKE_UP_EVENT); 
             Droplet::instance->disable();
         }
         

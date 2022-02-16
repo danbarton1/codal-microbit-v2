@@ -181,7 +181,7 @@ int DropletDatagram::send(ManagedString data)
     return send((uint8_t *)data.toCharArray(), data.length());
 }
 
-void DropletDatagram::networkDiscovery(DropletFrameBuffer *packet)
+void DropletDatagram::networkDiscovery(DropletFrameBuffer *packet) 
 {
     uint8_t slotId = packet->slotIdentifier;
 
@@ -226,6 +226,7 @@ void DropletDatagram::packetReceived()
     packet->next = NULL;
     packet->ttl--;
 
+    DropletScheduler::instance->analysePacket(packet);
     networkDiscovery(packet);
 
     if (Droplet::instance->getDropletStatus() != DropletStatus::Initialisation)
