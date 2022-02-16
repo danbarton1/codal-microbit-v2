@@ -60,7 +60,6 @@ void onExpirationCounterEvent(MicroBitEvent e)
 void onRadioWakeUpEvent(MicroBitEvent e)
 {
     Droplet::instance->enable();
-    // TODO: Update current slot
 }
 
 DropletScheduler::DropletScheduler(Timer &timer) : currentFrame(0), timer(timer)
@@ -77,9 +76,9 @@ DropletScheduler::DropletScheduler(Timer &timer) : currentFrame(0), timer(timer)
 
     instance = this;
 
-    this->timer.eventEvery(1000, DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT);
-    uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT, onExpirationCounterEvent);
-    uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_SCHEDULE_EVENT, onNextSlotEvent);
+    this->timer.eventEvery(1000, DEVICE_ID_RADIO, MICROBIT_DROPLET_EXPIRATION_EVENT);
+    uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_EXPIRATION_EVENT, onExpirationCounterEvent);
+    //uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_SCHEDULE_EVENT, onNextSlotEvent);
     uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_WAKE_UP_EVENT, onRadioWakeUpEvent);
 }
 
