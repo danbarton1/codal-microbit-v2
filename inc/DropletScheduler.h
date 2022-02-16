@@ -14,6 +14,7 @@
 #define MICROBIT_DROPLET_MAX_FRAMES 10
 
 #define MICROBIT_DROPLET_PREPARATION_WINDOW_MICROSECONDS 1000
+#define MICROBIT_DROPLET_PREPARATION_WINDOW_RECEPTION_MICROSECONDS MICROBIT_DROPLET_PREPARATION_WINDOW_MICROSECONDS / 2
 
 namespace codal
 {
@@ -31,9 +32,8 @@ namespace codal
         uint8_t expiration;
         uint8_t distance:4, flags:4;
         uint8_t errors;
-        bool unused; // TODO: Remove this field, shouldn't be needed
 
-        DropletSlot() : unused(true)
+        DropletSlot()
         {
             expiration = MICROBIT_DROPLET_EXPIRATION;
         }
@@ -59,6 +59,7 @@ namespace codal
         DropletSlot * getSlots();
         uint8_t getCurrentSlot() const;
         void setCurrentSlot(uint8_t id);
+        void queueAdvertisement();
         static DropletScheduler *instance;
     };
 };

@@ -199,10 +199,13 @@ void DropletDatagram::networkDiscovery(DropletFrameBuffer *packet)
     else if (Droplet::instance->getDropletStatus() == DropletStatus::Discovery && packet->deviceIdentifier != uBit.getSerialNumber() && (packet->flags & MICROBIT_DROPLET_ADVERT) == 0)
     {
         // TODO: Potential bug - if a slot if dropped in the middle it could cause this to never complete, must check!
+        // Probably just better to wait for all the slots to go
         if (Droplet::instance->getLastSlotId() <= slotId && slotId >= Droplet::instance->getInitialSlotId())
         {
             DMESG("Discovery mode complete - synchronised");
             Droplet::instance->setDropletStatus(DropletStatus::Synchronised);
+
+            // TODO: Wait for next advertisement slot 
         }
 
         Droplet::instance->setLastSlotId(slotId);

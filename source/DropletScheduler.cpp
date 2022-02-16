@@ -17,7 +17,7 @@ void onNextSlotEvent(MicroBitEvent e)
     // Only do this if the slot if not free
     DropletSlot slot = DropletScheduler::instance->getSlots()[id];
 
-    if (!slot.unused)
+    if ((slot.flags & MICROBIT_DROPLET_FREE) == MICROBIT_DROPLET_FREE)//!slot.unused)
     {
         if (!Droplet::instance->isEnabled())
         {
@@ -50,7 +50,6 @@ void onExpirationCounterEvent(MicroBitEvent e)
 
             if (p->expiration <= 0)
             {
-                p->unused = true;
                 p->flags |= MICROBIT_DROPLET_FREE;
                 p->expiration = MICROBIT_DROPLET_EXPIRATION;
             }
@@ -61,6 +60,7 @@ void onExpirationCounterEvent(MicroBitEvent e)
 void onRadioWakeUpEvent(MicroBitEvent e)
 {
     Droplet::instance->enable();
+    // TODO: Update current slot
 }
 
 DropletScheduler::DropletScheduler(Timer &timer) : currentFrame(0), timer(timer)
@@ -68,7 +68,6 @@ DropletScheduler::DropletScheduler(Timer &timer) : currentFrame(0), timer(timer)
     for (int i = 0; i < MICROBIT_DROPLET_ADVERTISEMENT_SLOTS; i++)
     {
         slots[i].flags |= MICROBIT_DROPLET_ADVERT;
-        slots[i].unused = false;
     }
 
     for (int i = MICROBIT_DROPLET_ADVERTISEMENT_SLOTS; i < MICROBIT_DROPLET_SLOTS; i++)
@@ -119,7 +118,9 @@ void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
             // TODO: Should be:
             // TODO: timeToNextSlot + slotsToSleepFor * MICROBIT_DROPLET_SLOT_DURATION - preparationWindow
             uint32_t t = (DropletNetworkClock::instance->getTime() + slotsToSleepFor * MICROBIT_DROPLET_SLOT_DURATION) * 1000 - MICROBIT_DROPLET_PREPARATION_WINDOW_MICROSECONDS;
-            timer.eventAfterUs(t, DEVICE_ID_RADIO, MICROBIT_DROPLET_WAKE_UP_EVENT); 
+            //timer.eventAfterUs(t, DEVICE_ID_RADIO, MICROBIT_DROPLET_WAKE_UP_EVENT); 
+            system_timer_event_every_us(t, DEVICE_ID_RADIO, MICROBIT_DROPLET_WAKE_UP_EVENT);
+            currentSlot = (currentSlot + slotsToSleepFor) % MICROBIT_DROPLET_SLOTS;
             Droplet::instance->disable();
         }
         
@@ -133,7 +134,7 @@ uint8_t DropletScheduler::getSlotsToSleepFor()
     for (int i = currentSlot; i < currentSlot + MICROBIT_DROPLET_SLOTS; i++)
     {
 
-        if (!slots[(i % MICROBIT_DROPLET_SLOTS)].unused)
+        if ((slots[(i % MICROBIT_DROPLET_SLOTS)].flags & MICROBIT_DROPLET_FREE) != MICROBIT_DROPLET_FREE)
         {
             return (i % MICROBIT_DROPLET_SLOTS) - 1;
         }
@@ -144,10 +145,15 @@ uint8_t DropletScheduler::getSlotsToSleepFor()
 
 void DropletScheduler::markSlotAsTaken(uint8_t id)
 {
-    // TODO: Return error if id is out of range
-    slots[MICROBIT_DROPLET_ADVERTISEMENT_SLOTS + id - 1].unused = false;
     // TODO: Mark slot as not free
     slots[MICROBIT_DROPLET_ADVERTISEMENT_SLOTS + id - 1].flags &= ~MICROBIT_DROPLET_FREE; 
+}
+
+void DropletScheduler::queueAdvertisement()
+{
+    // Pick a random number between 1 and 5 (with 1 being the next advertisement slot)
+    // Wait for that slot
+    // Send request
 }
 
 bool DropletScheduler::isSlotMine(uint8_t id)
