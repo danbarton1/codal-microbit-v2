@@ -36,7 +36,7 @@ namespace codal
         void setLocalTime(uint32_t time);
         uint32_t getLocalTime();
         void updateNetworkTime(uint32_t time);
-
+        uint32_t getPredictedNetworkTime();
     };
 }
 
