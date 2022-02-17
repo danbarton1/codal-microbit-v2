@@ -102,7 +102,6 @@ void codal::DropletNetworkClock::updateNetworkTime(uint32_t time)
 {
     // get local slot start time
     // localSlotStartTime = networkTime + slotDuration * slotDifference
-    uint32_t localSlotStartTime = 0;
     uint32_t drift = std::abs(time - localSlotStartTime);
 
     if (localSlotStartTime > time)
@@ -121,4 +120,9 @@ uint32_t codal::DropletNetworkClock::getPredictedNetworkTime()
 {
     uint32_t deltaLocalTime = system_timer_current_time_us() - localStartTime;
     return networkTime + deltaLocalTime;
+}
+
+void codal::DropletNetworkClock::slotStartTime() 
+{   
+    localSlotStartTime = system_timer_current_time_us();
 }

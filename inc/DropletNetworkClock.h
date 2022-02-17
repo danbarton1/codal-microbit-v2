@@ -22,6 +22,7 @@ namespace codal
         uint32_t localStartTime;
         uint32_t localTime;
         int32_t timeDifference;
+        uint32_t slotStartTime;
     public:
         static DropletNetworkClock *instance; 
         DropletNetworkClock(Timer &timer);
@@ -37,6 +38,7 @@ namespace codal
         uint32_t getLocalTime();
         void updateNetworkTime(uint32_t time);
         uint32_t getPredictedNetworkTime();
+        void slotStartTime();
     };
 }
 
