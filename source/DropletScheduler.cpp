@@ -121,7 +121,7 @@ void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
         {
             // timeToNextSlot + slotsToSleepFor * MICROBIT_DROPLET_SLOT_DURATION - preparationWindow
             // TODO: Only update the time if this is the first packet
-            uint32_t t = (DropletNetworkClock::instance->getNetworktime() + slotsToSleepFor * MICROBIT_DROPLET_SLOT_DURATION) * 1000 - MICROBIT_DROPLET_PREPARATION_WINDOW_MICROSECONDS;
+            uint32_t t = (DropletNetworkClock::instance->getNetworktime() + slotsToSleepFor * MICROBIT_DROPLET_SLOT_DURATION_MILLISECONDS) * 1000 - MICROBIT_DROPLET_PREPARATION_WINDOW_MICROSECONDS;
             //timer.eventAfterUs(t, DEVICE_ID_RADIO, MICROBIT_DROPLET_WAKE_UP_EVENT); 
             system_timer_event_every_us(t, DEVICE_ID_RADIO, MICROBIT_DROPLET_WAKE_UP_EVENT);
             currentSlot = (currentSlot + slotsToSleepFor) % MICROBIT_DROPLET_SLOTS;
