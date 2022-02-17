@@ -84,9 +84,7 @@ DropletScheduler::DropletScheduler(Timer &timer) : currentFrame(0), timer(timer)
 
 void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
 {
-    // TODO: check if this is the first packet received for this slot
-    // TODO: If it is, send the start time to the network clock
-    // TODO: Then we can sort out when the next slot is going to happen
+    // TODO: Here we need to check if we have already processed a packet with the same frame buffer
     DropletSlot *slot = &slots[buffer->slotIdentifier];
 
     // Invalid packet
@@ -106,6 +104,13 @@ void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
         
     }
 
+    if (isFirstPacket)
+    {   
+        DropletNetworkClock::instance->setNetworkTime(buffer->startTime);
+        isFirstPacket = false;
+    }
+    // TODO: Once we get here, ignore all packets from device, even if it is its slot
+
     if ((buffer->flags & MICROBIT_DROPLET_DONE) == MICROBIT_DROPLET_DONE)
     {
         // We have received the last packet, so shut down the radio
@@ -114,9 +119,9 @@ void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
 
         if (slotsToSleepFor > 0)
         {
-            // TODO: Should be:
-            // TODO: timeToNextSlot + slotsToSleepFor * MICROBIT_DROPLET_SLOT_DURATION - preparationWindow
-            uint32_t t = (DropletNetworkClock::instance->getTime() + slotsToSleepFor * MICROBIT_DROPLET_SLOT_DURATION) * 1000 - MICROBIT_DROPLET_PREPARATION_WINDOW_MICROSECONDS;
+            // timeToNextSlot + slotsToSleepFor * MICROBIT_DROPLET_SLOT_DURATION - preparationWindow
+            // TODO: Only update the time if this is the first packet
+            uint32_t t = (DropletNetworkClock::instance->getNetworktime() + slotsToSleepFor * MICROBIT_DROPLET_SLOT_DURATION) * 1000 - MICROBIT_DROPLET_PREPARATION_WINDOW_MICROSECONDS;
             //timer.eventAfterUs(t, DEVICE_ID_RADIO, MICROBIT_DROPLET_WAKE_UP_EVENT); 
             system_timer_event_every_us(t, DEVICE_ID_RADIO, MICROBIT_DROPLET_WAKE_UP_EVENT);
             currentSlot = (currentSlot + slotsToSleepFor) % MICROBIT_DROPLET_SLOTS;
@@ -124,6 +129,7 @@ void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
         }
         
         maxFrameId = frameId;
+        isFirstPacket = true;
     }
 }
 
@@ -132,7 +138,7 @@ uint8_t DropletScheduler::getSlotsToSleepFor()
     // Circular array
     for (int i = currentSlot; i < currentSlot + MICROBIT_DROPLET_SLOTS; i++)
     {
-
+        // TODO: This might not work as intended with advertisment slots
         if ((slots[(i % MICROBIT_DROPLET_SLOTS)].flags & MICROBIT_DROPLET_FREE) != MICROBIT_DROPLET_FREE)
         {
             return (i % MICROBIT_DROPLET_SLOTS) - 1;
@@ -144,7 +150,6 @@ uint8_t DropletScheduler::getSlotsToSleepFor()
 
 void DropletScheduler::markSlotAsTaken(uint8_t id)
 {
-    // TODO: Mark slot as not free
     slots[MICROBIT_DROPLET_ADVERTISEMENT_SLOTS + id - 1].flags &= ~MICROBIT_DROPLET_FREE; 
 }
 

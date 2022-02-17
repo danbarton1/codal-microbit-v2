@@ -9,6 +9,7 @@ Makefile
 *.hex
 *.DS_Store
 .vscode
+.vs
 *.uf2
 *.bin
 pxtapp

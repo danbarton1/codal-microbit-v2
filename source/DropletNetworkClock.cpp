@@ -3,6 +3,7 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <cmath>
 
 using namespace codal;
 extern MicroBit uBit;
@@ -68,4 +69,41 @@ void DropletNetworkClock::setTime(uint32_t t)
 uint32_t DropletNetworkClock::getTimeUntilNextSlot() const
 {
     return 0;
+}
+
+void DropletNetworkClock::setNetworkTime(uint32_t time)
+{
+    // get local slot start time
+    uint32_t localSlotStartTime = 0;
+    uint32_t drift = std::abs(time - localSlotStartTime);
+    
+    if (localSlotStartTime > time)
+    {
+        time -= drift;
+    }
+    else if (localSlotStartTime < time)
+    {
+        time += drift;
+    }
+
+    networkTime = time;
+}
+
+/**
+ * Network time is only updated on the first packet received for each slot
+ * Use the relative difference between network time and local time to work out 
+ */ 
+uint32_t DropletNetworkClock::getNetworkTime()
+{
+    return networkTime;
+}
+
+void DropletNetworkClock::setLocalTime(uint32_t time)
+{
+    localTime = time;
+}
+
+uint32_t DropletNetworkClock::getLocalTime()
+{
+    return localTime
 }
