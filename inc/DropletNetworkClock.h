@@ -19,7 +19,9 @@ namespace codal
         Timer &timer;
 
         uint32_t networkTime;
+        uint32_t localStartTime;
         uint32_t localTime;
+        int32_t timeDifference;
     public:
         static DropletNetworkClock *instance; 
         DropletNetworkClock(Timer &timer);
@@ -30,14 +32,10 @@ namespace codal
         void setTime(uint32_t t);
 
         void setNetworkTime(uint32_t time);
-
-        /**
-         * Network time is only updated on the first packet received for each slot
-         * Use the relative difference between network time and local time to work out 
-         */ 
         uint32_t getNetworkTime();
         void setLocalTime(uint32_t time);
         uint32_t getLocalTime();
+        void updateNetworkTime(uint32_t time);
 
     };
 }

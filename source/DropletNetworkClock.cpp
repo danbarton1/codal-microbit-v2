@@ -73,20 +73,10 @@ uint32_t DropletNetworkClock::getTimeUntilNextSlot() const
 
 void DropletNetworkClock::setNetworkTime(uint32_t time)
 {
-    // get local slot start time
-    uint32_t localSlotStartTime = 0;
-    uint32_t drift = std::abs(time - localSlotStartTime);
-    
-    if (localSlotStartTime > time)
-    {
-        time -= drift;
-    }
-    else if (localSlotStartTime < time)
-    {
-        time += drift;
-    }
-
     networkTime = time;
+    localStartTime = system_timer_current_time_us();
+    // Negative means we are ahead, positive means the network clock is ahead
+    timeDifference = time - localStartTime;
 }
 
 /**
@@ -105,5 +95,24 @@ void DropletNetworkClock::setLocalTime(uint32_t time)
 
 uint32_t DropletNetworkClock::getLocalTime()
 {
-    return localTime
+    return localTime;
+}
+
+void codal::DropletNetworkClock::updateNetworkTime(uint32_t time) 
+{
+    // get local slot start time
+    // localSlotStartTime = networkTime + slotDuration * slotDifference
+    uint32_t localSlotStartTime = 0;
+    uint32_t drift = std::abs(time - localSlotStartTime);
+
+    if (localSlotStartTime > time)
+    {
+        time -= drift;
+    }
+    else if (localSlotStartTime < time)
+    {
+        time += drift;
+    }
+
+    setNetworkTime(time);
 }
