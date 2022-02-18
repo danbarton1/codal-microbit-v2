@@ -63,6 +63,7 @@ namespace codal
         uint8_t getCurrentSlot() const;
         void setCurrentSlot(uint8_t id);
         void queueAdvertisement();
+        void deleteFrames();
         static DropletScheduler *instance;
     };
 };

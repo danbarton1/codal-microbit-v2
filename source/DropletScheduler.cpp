@@ -14,6 +14,8 @@ void onNextSlotEvent(MicroBitEvent e)
     id = (id + 1) % MICROBIT_DROPLET_SLOTS;
     DropletScheduler::instance->setCurrentSlot(id);
 
+    DropletScheduler::instance->deleteFrames();
+
     // Only do this if the slot if not free
     DropletSlot slot = DropletScheduler::instance->getSlots()[id];
 
@@ -170,6 +172,14 @@ void DropletScheduler::queueAdvertisement()
     // Pick a random number between 1 and 5 (with 1 being the next advertisement slot)
     // Wait for that slot
     // Send request
+}
+
+void codal::DropletScheduler::deleteFrames() 
+{   
+    for (int i = 0; i < MICROBIT_DROPLET_MAX_FRAMES; i++)
+    {
+        delete frames[i];
+    }
 }
 
 bool DropletScheduler::isSlotMine(uint8_t id)
