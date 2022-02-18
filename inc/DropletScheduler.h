@@ -52,8 +52,10 @@ namespace codal
         uint8_t maxFrameId;
         bool isFirstPacket;
         DropletFrameBuffer *frames[MICROBIT_DROPLET_MAX_FRAMES];
-        uint32_t getFirstFreeSlot(uint8_t &slotId);
         uint16_t advertCounter;
+        uint16_t advertGoal;
+        bool sendAdvertPacket;
+        uint32_t getFirstFreeSlot(uint8_t &slotId);
     public:
         DropletScheduler(Timer &timer);
         uint8_t getSlotsToSleepFor();
@@ -67,6 +69,7 @@ namespace codal
         void setCurrentSlot(uint8_t id);
         void queueAdvertisement();
         void deleteFrames();
+        void sendAdvertisement(DropletSlot slot);
         static DropletScheduler *instance;
     };
 };

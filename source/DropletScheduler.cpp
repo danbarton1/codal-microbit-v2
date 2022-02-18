@@ -6,7 +6,7 @@ using namespace codal;
 
 extern MicroBit uBit;
 
-DropletScheduler *DropletScheduler::instance = nullptr;
+DropletScheduler* DropletScheduler::instance = nullptr;
 
 void onNextSlotEvent(MicroBitEvent e)
 {
@@ -40,6 +40,8 @@ void onNextSlotEvent(MicroBitEvent e)
     // If so, increment the advert counter
     // If the advert counter >= goal
     // Send packet
+
+    DropletScheduler::instance->sendAdvertisement(slot);
 }
 
 void onExpirationCounterEvent(MicroBitEvent e)
@@ -192,40 +194,9 @@ void DropletScheduler::queueAdvertisement()
     // Send request
 
     int num = microbit_random(4) + 1;
+    advertGoal = advertCounter + num;
 
-    // Wait for slot
-
-    // Pick a free slot
-    // A counter of the number of advertisement slots 
-    // goal is counter + num
-    // Once the goal has been reached, execute the below code
-    // onAdvertisementSlotEvent?
-    uint8_t slot;
-
-    uint32_t result = getFirstFreeSlot(slot);
-
-    // We have found a free slot!
-    if (result == MICROBIT_OK)
-    {
-        DMESG("Slot: %d Num: %d", slot, num);
-
-        DropletFrameBuffer *advert = new DropletFrameBuffer();
-        advert->length = MICROBIT_DROPLET_HEADER_SIZE - 1;
-        advert->flags |= MICROBIT_DROPLET_ADVERT;
-        advert->slotIdentifier = slot;
-        advert->deviceIdentifier = uBit.getSerialNumber();
-        advert->protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
-        advert->initialTtl = MICROBIT_DROPLET_ADVERTISEMENT_TTL;
-        advert->ttl = MICROBIT_DROPLET_ADVERTISEMENT_TTL;
-        advert->startTime = uBit.systemTime();
-
-        Droplet::instance->send(advert);
-    }
-    else
-    {
-        // Maybe try again?
-    }
-    
+    sendAdvertPacket = true;
 }
 
 void codal::DropletScheduler::deleteFrames() 
@@ -233,6 +204,44 @@ void codal::DropletScheduler::deleteFrames()
     for (int i = 0; i < MICROBIT_DROPLET_MAX_FRAMES; i++)
     {
         delete frames[i];
+    }
+}
+
+void codal::DropletScheduler::sendAdvertisement(DropletSlot slot) 
+{
+    if ((slot.flags & MICROBIT_DROPLET_ADVERT) == MICROBIT_DROPLET_ADVERT)
+    {
+        advertCounter++;
+
+        if (advertCounter >= advertGoal && sendAdvertPacket)
+        {
+            uint8_t slot;
+
+            uint32_t result = getFirstFreeSlot(slot);
+
+            // We have found a free slot!
+            if (result == MICROBIT_OK)
+            {
+                DMESG("Slot: %d", slot);
+
+                DropletFrameBuffer *advert = new DropletFrameBuffer();
+                advert->length = MICROBIT_DROPLET_HEADER_SIZE - 1;
+                advert->flags |= MICROBIT_DROPLET_ADVERT;
+                advert->slotIdentifier = slot;
+                advert->deviceIdentifier = uBit.getSerialNumber();
+                advert->protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
+                advert->initialTtl = MICROBIT_DROPLET_ADVERTISEMENT_TTL;
+                advert->ttl = MICROBIT_DROPLET_ADVERTISEMENT_TTL;
+                advert->startTime = uBit.systemTime();
+
+                Droplet::instance->send(advert);
+                sendAdvertPacket = false;
+            }
+            else
+            {
+                // Maybe try again?
+            }
+        }
     }
 }
 
