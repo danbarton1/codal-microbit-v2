@@ -138,6 +138,8 @@ uint32_t DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
         maxFrameId = frameId;
         isFirstPacket = true;
     }
+
+    return MICROBIT_OK;
 }
 
 uint8_t DropletScheduler::getSlotsToSleepFor()

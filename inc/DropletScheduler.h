@@ -50,7 +50,7 @@ namespace codal
         Timer &timer;
         uint8_t maxFrameId;
         bool isFirstPacket;
-        DropletFrameBuffer frames[MICROBIT_DROPLET_MAX_FRAMES];
+        DropletFrameBuffer *frames[MICROBIT_DROPLET_MAX_FRAMES];
     public:
         DropletScheduler(Timer &timer);
         uint8_t getSlotsToSleepFor();
