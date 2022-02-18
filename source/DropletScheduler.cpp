@@ -19,7 +19,7 @@ void onNextSlotEvent(MicroBitEvent e)
     // Only do this if the slot if not free
     DropletSlot slot = DropletScheduler::instance->getSlots()[id];
 
-    if (slot.flags & MICROBIT_DROPLET_FREE) == MICROBIT_DROPLET_FREE || (slot.flags & MICROBIT_DROPLET_ADVERT) == MICROBIT_DROPLET_ADVERT)
+    if ((slot.flags & MICROBIT_DROPLET_FREE) == MICROBIT_DROPLET_FREE || (slot.flags & MICROBIT_DROPLET_ADVERT) == MICROBIT_DROPLET_ADVERT)
     {
         if (!Droplet::instance->isEnabled())
         {
@@ -36,6 +36,10 @@ void onNextSlotEvent(MicroBitEvent e)
         }
     }
 
+    // Check if the slot if advert
+    // If so, increment the advert counter
+    // If the advert counter >= goal
+    // Send packet
 }
 
 void onExpirationCounterEvent(MicroBitEvent e)
@@ -66,7 +70,7 @@ void onRadioWakeUpEvent(MicroBitEvent e)
     Droplet::instance->enable();
 }
 
-DropletScheduler::DropletScheduler(Timer &timer) : currentFrame(0), timer(timer), frames()
+DropletScheduler::DropletScheduler(Timer &timer) : currentFrame(0), timer(timer), frames(), advertCounter(0)
 {
     for (int i = 0; i < MICROBIT_DROPLET_ADVERTISEMENT_SLOTS; i++)
     {
@@ -205,7 +209,7 @@ void DropletScheduler::queueAdvertisement()
     {
         DMESG("Slot: %d Num: %d", slot, num);
 
-        DropletFrameBuffer *advert;
+        DropletFrameBuffer *advert = new DropletFrameBuffer();
         advert->length = MICROBIT_DROPLET_HEADER_SIZE - 1;
         advert->flags |= MICROBIT_DROPLET_ADVERT;
         advert->slotIdentifier = slot;
