@@ -88,7 +88,6 @@ DropletScheduler::DropletScheduler(Timer &timer) : currentFrame(0), timer(timer)
 
 uint32_t DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
 {
-    // TODO: Here we need to check if we have already processed a packet with the same frame buffer
     DropletSlot *slot = &slots[buffer->slotIdentifier];
 
     // Invalid packet
@@ -167,11 +166,46 @@ void DropletScheduler::markSlotAsTaken(uint8_t id)
     slots[MICROBIT_DROPLET_ADVERTISEMENT_SLOTS + id - 1].flags &= ~MICROBIT_DROPLET_FREE; 
 }
 
+uint32_t codal::DropletScheduler::getFirstFreeSlot(uint8_t &slotId)
+{
+    for (DropletSlot slot : slots)
+    {
+        if ((slot.flags & MICROBIT_DROPLET_FREE) == MICROBIT_DROPLET_FREE)
+        {
+            slotId = slot.slotIdentifier;
+            return MICROBIT_OK;
+        }
+    }
+
+    return MICROBIT_DROPLET_NO_SLOTS;
+}
+
 void DropletScheduler::queueAdvertisement()
 {
     // Pick a random number between 1 and 5 (with 1 being the next advertisement slot)
     // Wait for that slot
+    // Pick a free slot
     // Send request
+
+    int num = microbit_random(4) + 1;
+
+    // Wait for slot
+
+    // Pick a free slot
+    uint8_t slot;
+
+    uint32_t result = getFirstFreeSlot(slot);
+
+    // We have found a free slot!
+    if (result == MICROBIT_OK)
+    {
+        DMESG("Slot: %d Num: %d", slot, num);
+    }
+    else
+    {
+        // Maybe try again?
+    }
+    
 }
 
 void codal::DropletScheduler::deleteFrames() 
