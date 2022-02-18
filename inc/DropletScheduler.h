@@ -16,6 +16,8 @@
 #define MICROBIT_DROPLET_PREPARATION_WINDOW_MICROSECONDS 1000
 #define MICROBIT_DROPLET_PREPARATION_WINDOW_RECEPTION_MICROSECONDS MICROBIT_DROPLET_PREPARATION_WINDOW_MICROSECONDS / 2
 
+#define MICROBIT_DROPLET_DUPLICATE_PACKET 50
+
 namespace codal
 {
     struct DropletSlot;
@@ -48,7 +50,7 @@ namespace codal
         Timer &timer;
         uint8_t maxFrameId;
         bool isFirstPacket;
-       // DropletFrameBuffer frames[MICROBIT_DROPLET_MAX_FRAMES];
+        DropletFrameBuffer frames[MICROBIT_DROPLET_MAX_FRAMES];
     public:
         DropletScheduler(Timer &timer);
         uint8_t getSlotsToSleepFor();
@@ -56,7 +58,7 @@ namespace codal
         bool isSlotMine(uint8_t id);
         bool isNextSlotMine();
         void incrementError();
-        void analysePacket(DropletFrameBuffer *buffer);
+        uint32_t analysePacket(DropletFrameBuffer *buffer);
         DropletSlot * getSlots();
         uint8_t getCurrentSlot() const;
         void setCurrentSlot(uint8_t id);

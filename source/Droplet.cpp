@@ -668,6 +668,9 @@ void Droplet::idleCallback()
     {
         DropletFrameBuffer *p = rxQueue;
 
+        // TODO: Analyse packet here
+        // If we get a duplicate packet, forward it on but do not process it
+
         switch (p->protocol)
         {
             case MICROBIT_RADIO_PROTOCOL_DATAGRAM:

@@ -11,6 +11,7 @@ namespace codel
 
 namespace codal
 {
+    // TODO: The clock works in microseconds, make sure it isn't in milliseconds anywhere
     class DropletNetworkClock
     {
     private:
@@ -22,7 +23,7 @@ namespace codal
         uint32_t localStartTime;
         uint32_t localTime;
         int32_t timeDifference;
-        uint32_t slotStartTime;
+        uint32_t localSlotStartTime;
     public:
         static DropletNetworkClock *instance; 
         DropletNetworkClock(Timer &timer);

@@ -23,6 +23,8 @@ void onNextSlotEvent(MicroBitEvent e)
         {
             Droplet::instance->enable();
         }
+
+        DropletNetworkClock::instance->slotStartTime();
     }
     else
     {
@@ -62,7 +64,7 @@ void onRadioWakeUpEvent(MicroBitEvent e)
     Droplet::instance->enable();
 }
 
-DropletScheduler::DropletScheduler(Timer &timer) : currentFrame(0), timer(timer)
+DropletScheduler::DropletScheduler(Timer &timer) : currentFrame(0), timer(timer), frames()
 {
     for (int i = 0; i < MICROBIT_DROPLET_ADVERTISEMENT_SLOTS; i++)
     {
@@ -82,7 +84,7 @@ DropletScheduler::DropletScheduler(Timer &timer) : currentFrame(0), timer(timer)
     uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_WAKE_UP_EVENT, onRadioWakeUpEvent);
 }
 
-void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
+uint32_t DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
 {
     // TODO: Here we need to check if we have already processed a packet with the same frame buffer
     DropletSlot *slot = &slots[buffer->slotIdentifier];
@@ -91,18 +93,22 @@ void DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
     if (slot->deviceIdentifier != buffer->deviceIdentifier)
     {
         slot->errors++;
-        return;
+        return MICROBIT_INVALID_PARAMETER;
     }
+
+    // Duplicate packet
+    if (frames[buffer->frameIdentifier])
+    {
+        return MICROBIT_DROPLET_DUPLICATE_PACKET;
+    }
+
+    frames[buffer->frameIdentifier] = buffer;
 
     slot->expiration = MICROBIT_DROPLET_EXPIRATION;
 
     uint8_t frameId = buffer->frameIdentifier;
 
-    // TODO: Maybe not the best way to check for lost frames
-    if (frameId <= currentFrame)
-    {
-        
-    }
+
 
     if (isFirstPacket)
     {   
