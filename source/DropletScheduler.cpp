@@ -19,7 +19,7 @@ void onNextSlotEvent(MicroBitEvent e)
     // Only do this if the slot if not free
     DropletSlot slot = DropletScheduler::instance->getSlots()[id];
 
-    if ((slot.flags & MICROBIT_DROPLET_FREE) == MICROBIT_DROPLET_FREE)//!slot.unused)
+    if (slot.flags & MICROBIT_DROPLET_FREE) == MICROBIT_DROPLET_FREE || (slot.flags & MICROBIT_DROPLET_ADVERT) == MICROBIT_DROPLET_ADVERT)
     {
         if (!Droplet::instance->isEnabled())
         {
@@ -30,7 +30,7 @@ void onNextSlotEvent(MicroBitEvent e)
     }
     else
     {
-        if (!Droplet::instance->isEnabled())
+        if (Droplet::instance->isEnabled())
         {
             Droplet::instance->disable();
         }
@@ -192,6 +192,10 @@ void DropletScheduler::queueAdvertisement()
     // Wait for slot
 
     // Pick a free slot
+    // A counter of the number of advertisement slots 
+    // goal is counter + num
+    // Once the goal has been reached, execute the below code
+    // onAdvertisementSlotEvent?
     uint8_t slot;
 
     uint32_t result = getFirstFreeSlot(slot);
