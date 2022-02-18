@@ -200,6 +200,18 @@ void DropletScheduler::queueAdvertisement()
     if (result == MICROBIT_OK)
     {
         DMESG("Slot: %d Num: %d", slot, num);
+
+        DropletFrameBuffer *advert;
+        advert->length = MICROBIT_DROPLET_HEADER_SIZE - 1;
+        advert->flags |= MICROBIT_DROPLET_ADVERT;
+        advert->slotIdentifier = slot;
+        advert->deviceIdentifier = uBit.getSerialNumber();
+        advert->protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
+        advert->initialTtl = MICROBIT_DROPLET_ADVERTISEMENT_TTL;
+        advert->ttl = MICROBIT_DROPLET_ADVERTISEMENT_TTL;
+        advert->startTime = uBit.systemTime();
+
+        Droplet::instance->send(advert);
     }
     else
     {
