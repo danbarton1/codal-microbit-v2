@@ -108,7 +108,10 @@ uint32_t DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
 
     uint8_t frameId = buffer->frameIdentifier;
 
-
+    // On receive, reset the expiration counter
+    // Shouldn't actually need to use the KEEP_ALIVE flag
+    // But it will be kept just in case
+    slot->expiration = MICROBIT_DROPLET_EXPIRATION;
 
     if (isFirstPacket)
     {   
