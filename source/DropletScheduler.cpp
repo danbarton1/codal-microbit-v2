@@ -41,7 +41,12 @@ void onNextSlotEvent(MicroBitEvent e)
     // If the advert counter >= goal
     // Send packet
 
-    DropletScheduler::instance->sendAdvertisement(slot);
+    auto result = DropletScheduler::instance->sendAdvertisement(slot);
+
+    if (result == MICROBIT_OK)
+    {
+        DMESG("Found slot");
+    }
 }
 
 void onExpirationCounterEvent(MicroBitEvent e)
@@ -109,6 +114,14 @@ uint32_t DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
         return MICROBIT_DROPLET_DUPLICATE_PACKET;
     }
 
+    // We have received an advertisement packet
+    // Add it to our local schedule
+    if ((buffer->flags & MICROBIT_DROPLET_ADVERT) == MICROBIT_DROPLET_ADVERT)
+    {
+        setSlot(buffer->slotIdentifier, buffer->deviceIdentifier);
+        return;
+    }
+
     frames[buffer->frameIdentifier] = buffer;
 
     slot->expiration = MICROBIT_DROPLET_EXPIRATION;
@@ -126,6 +139,8 @@ uint32_t DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
         isFirstPacket = false;
     }
     // TODO: Once we get here, ignore all packets from device, even if it is its slot
+    // bool isLastPacket?
+    // For optimisation purposes, could be worth using uint8_t and bit packing isFirstPacket and isLastPacket
 
     if ((buffer->flags & MICROBIT_DROPLET_DONE) == MICROBIT_DROPLET_DONE)
     {
@@ -224,11 +239,13 @@ void codal::DropletScheduler::sendAdvertisement(DropletSlot slot)
             {
                 DMESG("Slot: %d", slot);
 
+                uint64_t deviceId = uBit.getSerialNumber();
+
                 DropletFrameBuffer *advert = new DropletFrameBuffer();
                 advert->length = MICROBIT_DROPLET_HEADER_SIZE - 1;
                 advert->flags |= MICROBIT_DROPLET_ADVERT;
                 advert->slotIdentifier = slot;
-                advert->deviceIdentifier = uBit.getSerialNumber();
+                advert->deviceIdentifier = deviceId;
                 advert->protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
                 advert->initialTtl = MICROBIT_DROPLET_ADVERTISEMENT_TTL;
                 advert->ttl = MICROBIT_DROPLET_ADVERTISEMENT_TTL;
@@ -236,13 +253,35 @@ void codal::DropletScheduler::sendAdvertisement(DropletSlot slot)
 
                 Droplet::instance->send(advert);
                 sendAdvertPacket = false;
+
+                // Adding myself to my local schedule
+                setSlot(slot, deviceId);
+
+                return MICROBIT_OK;
             }
             else
             {
                 // Maybe try again?
+                return MICROBIT_DROPLET_NO_SLOTS;
             }
         }
     }
+
+    return MICROBIT_DROPLET_ERROR;
+}
+
+void codal::DropletScheduler::setSlot(uint8_t slotId, uint64_t deviceId) 
+{
+    if (slotId > MICROBIT_DROPLET_SLOTS)
+        return MICROBIT_DROPLET_ERROR;
+
+    // TODO: Check if the slot is actually an advertisement
+    // If it is, return error
+
+    slots[slotId].slotIdentifier = slotId;
+    slots[slotId].deviceIdentifier = deviceId;
+    slots[slotId].expiration = MICROBIT_DROPLET_EXPIRATION;
+    slots[slotId].errors = 0;
 }
 
 bool DropletScheduler::isSlotMine(uint8_t id)
