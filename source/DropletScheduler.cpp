@@ -119,7 +119,7 @@ uint32_t DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
     if ((buffer->flags & MICROBIT_DROPLET_ADVERT) == MICROBIT_DROPLET_ADVERT)
     {
         setSlot(buffer->slotIdentifier, buffer->deviceIdentifier);
-        return;
+        return MICROBIT_OK;
     }
 
     frames[buffer->frameIdentifier] = buffer;
@@ -226,7 +226,7 @@ void codal::DropletScheduler::deleteFrames()
     }
 }
 
-void codal::DropletScheduler::sendAdvertisement(DropletSlot slot) 
+uint16_t codal::DropletScheduler::sendAdvertisement(DropletSlot slot) 
 {
     if ((slot.flags & MICROBIT_DROPLET_ADVERT) == MICROBIT_DROPLET_ADVERT)
     {
@@ -302,7 +302,7 @@ uint16_t codal::DropletScheduler::nextSlotStatus()
     {
         return MICROBIT_DROPLET_OWNER;
     }
-    else if (slot->flags & MICROBIT_DROPLET_FREE == MICROBIT_DROPLET_FREE)
+    else if ((slot->flags & MICROBIT_DROPLET_FREE) == MICROBIT_DROPLET_FREE)
     {
         return MICROBIT_DROPLET_FREE;
     }
