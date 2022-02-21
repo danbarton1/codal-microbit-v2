@@ -282,6 +282,7 @@ void codal::DropletScheduler::setSlot(uint8_t slotId, uint64_t deviceId)
     slots[slotId].deviceIdentifier = deviceId;
     slots[slotId].expiration = MICROBIT_DROPLET_EXPIRATION;
     slots[slotId].errors = 0;
+    markSlotAsTaken(slotId);
 }
 
 bool DropletScheduler::isSlotMine(uint8_t id)
