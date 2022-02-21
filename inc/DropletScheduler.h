@@ -19,6 +19,9 @@
 #define MICROBIT_DROPLET_DUPLICATE_PACKET 50
 #define MICROBIT_DROPLET_NO_SLOTS 51
 
+#define MICROBIT_DROPLET_OWNER 0
+#define MICROBIT_DROPLET_PARTICIPANT 1
+
 namespace codal
 {
     struct DropletSlot;
@@ -70,7 +73,8 @@ namespace codal
         void queueAdvertisement();
         void deleteFrames();
         uint16_t sendAdvertisement(DropletSlot slot);
-        void setSlot(uint8_t slotId, uint64_t deviceId);
+        uint16_t setSlot(uint8_t slotId, uint64_t deviceId);
+        uint16_t nextSlotStatus();
         static DropletScheduler *instance;
     };
 };

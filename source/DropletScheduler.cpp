@@ -142,6 +142,10 @@ uint32_t DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
     // bool isLastPacket?
     // For optimisation purposes, could be worth using uint8_t and bit packing isFirstPacket and isLastPacket
 
+    // TODO: distance
+    // The distance field could allow for the packets ttl to be more efficiently set
+    // However, James' doesn't make it clear how this distance field should actually be used
+
     if ((buffer->flags & MICROBIT_DROPLET_DONE) == MICROBIT_DROPLET_DONE)
     {
         // We have received the last packet, so shut down the radio
@@ -270,19 +274,40 @@ void codal::DropletScheduler::sendAdvertisement(DropletSlot slot)
     return MICROBIT_DROPLET_ERROR;
 }
 
-void codal::DropletScheduler::setSlot(uint8_t slotId, uint64_t deviceId) 
+uint16_t codal::DropletScheduler::setSlot(uint8_t slotId, uint64_t deviceId) 
 {
     if (slotId > MICROBIT_DROPLET_SLOTS)
         return MICROBIT_DROPLET_ERROR;
 
-    // TODO: Check if the slot is actually an advertisement
-    // If it is, return error
+    // We are trying to modify an advert slot
+    // That isn't allowed
+    if ((slots[slotId].flags & MICROBIT_DROPLET_ADVERT) == MICROBIT_DROPLET_ADVERT)
+    {
+        return MICROBIT_DROPLET_ERROR;
+    }
 
     slots[slotId].slotIdentifier = slotId;
     slots[slotId].deviceIdentifier = deviceId;
     slots[slotId].expiration = MICROBIT_DROPLET_EXPIRATION;
     slots[slotId].errors = 0;
     markSlotAsTaken(slotId);
+    return MICROBIT_OK;
+}
+
+uint16_t codal::DropletScheduler::nextSlotStatus()
+{
+    DropletSlot *slot = &slots[(currentSlot + 1) % MICROBIT_DROPLET_SLOTS];
+
+    if (slot->deviceIdentifier == uBit.getSerialNumber())
+    {
+        return MICROBIT_DROPLET_OWNER;
+    }
+    else if (slot->flags & MICROBIT_DROPLET_FREE == MICROBIT_DROPLET_FREE)
+    {
+        return MICROBIT_DROPLET_FREE;
+    }
+
+    return MICROBIT_DROPLET_PARTICIPANT;
 }
 
 bool DropletScheduler::isSlotMine(uint8_t id)
