@@ -115,8 +115,8 @@ void onInitialiseEvent(MicroBitEvent e)
     DropletFrameBuffer *buffer = new DropletFrameBuffer();
     buffer->length = MICROBIT_DROPLET_HEADER_SIZE - 1;
     buffer->flags |= MICROBIT_DROPLET_ADVERT;
-    buffer->slotIdentifier = 0;
-    buffer->deviceIdentifier = uBit.getSerialNumber();
+    buffer->slotId = 0;
+    buffer->deviceId = uBit.getSerialNumber();
     buffer->protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
     buffer->initialTtl = MICROBIT_DROPLET_INITIALISATION_TTL;
     buffer->ttl = MICROBIT_DROPLET_INITIALISATION_TTL;

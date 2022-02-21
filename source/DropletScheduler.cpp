@@ -99,17 +99,24 @@ DropletScheduler::DropletScheduler(Timer &timer) : currentFrame(0), timer(timer)
 
 uint32_t DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
 {
-    DropletSlot *slot = &slots[buffer->slotIdentifier];
+    // TODO: If the slot in the packet is different to local slot, use the network slot
+
+    if (true)
+    {
+
+    }
+
+    DropletSlot *slot = &slots[buffer->slotId];
 
     // Invalid packet
-    if (slot->deviceIdentifier != buffer->deviceIdentifier)
+    if (slot->deviceId != buffer->deviceId)
     {
         slot->errors++;
         return MICROBIT_INVALID_PARAMETER;
     }
 
     // Duplicate packet
-    if (frames[buffer->frameIdentifier])
+    if (frames[buffer->frameId])
     {
         return MICROBIT_DROPLET_DUPLICATE_PACKET;
     }
@@ -118,15 +125,15 @@ uint32_t DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
     // Add it to our local schedule
     if ((buffer->flags & MICROBIT_DROPLET_ADVERT) == MICROBIT_DROPLET_ADVERT)
     {
-        setSlot(buffer->slotIdentifier, buffer->deviceIdentifier);
+        setSlot(buffer->slotId, buffer->deviceId);
         return MICROBIT_OK;
     }
 
-    frames[buffer->frameIdentifier] = buffer;
+    frames[buffer->frameId] = buffer;
 
     slot->expiration = MICROBIT_DROPLET_EXPIRATION;
 
-    uint8_t frameId = buffer->frameIdentifier;
+    uint8_t frameId = buffer->frameId;
 
     // On receive, reset the expiration counter
     // Shouldn't actually need to use the KEEP_ALIVE flag
@@ -197,7 +204,7 @@ uint32_t codal::DropletScheduler::getFirstFreeSlot(uint8_t &slotId)
     {
         if ((slot.flags & MICROBIT_DROPLET_FREE) == MICROBIT_DROPLET_FREE)
         {
-            slotId = slot.slotIdentifier;
+            slotId = slot.slotId;
             return MICROBIT_OK;
         }
     }
@@ -248,8 +255,8 @@ uint16_t codal::DropletScheduler::sendAdvertisement(DropletSlot slot)
                 DropletFrameBuffer *advert = new DropletFrameBuffer();
                 advert->length = MICROBIT_DROPLET_HEADER_SIZE - 1;
                 advert->flags |= MICROBIT_DROPLET_ADVERT;
-                advert->slotIdentifier = slot;
-                advert->deviceIdentifier = deviceId;
+                advert->slotId = slot;
+                advert->deviceId = deviceId;
                 advert->protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
                 advert->initialTtl = MICROBIT_DROPLET_ADVERTISEMENT_TTL;
                 advert->ttl = MICROBIT_DROPLET_ADVERTISEMENT_TTL;
@@ -286,8 +293,8 @@ uint16_t codal::DropletScheduler::setSlot(uint8_t slotId, uint64_t deviceId)
         return MICROBIT_DROPLET_ERROR;
     }
 
-    slots[slotId].slotIdentifier = slotId;
-    slots[slotId].deviceIdentifier = deviceId;
+    slots[slotId].slotId = slotId;
+    slots[slotId].deviceId = deviceId;
     slots[slotId].expiration = MICROBIT_DROPLET_EXPIRATION;
     slots[slotId].errors = 0;
     markSlotAsTaken(slotId);
@@ -298,7 +305,7 @@ uint16_t codal::DropletScheduler::nextSlotStatus()
 {
     DropletSlot *slot = &slots[(currentSlot + 1) % MICROBIT_DROPLET_SLOTS];
 
-    if (slot->deviceIdentifier == uBit.getSerialNumber())
+    if (slot->deviceId == uBit.getSerialNumber())
     {
         return MICROBIT_DROPLET_OWNER;
     }
@@ -312,12 +319,12 @@ uint16_t codal::DropletScheduler::nextSlotStatus()
 
 bool DropletScheduler::isSlotMine(uint8_t id)
 {
-    return slots[id].deviceIdentifier == uBit.getSerialNumber();
+    return slots[id].deviceId == uBit.getSerialNumber();
 }
 
 bool DropletScheduler::isNextSlotMine()
 {
-    return slots[(currentSlot + 1) % MICROBIT_DROPLET_SLOTS].deviceIdentifier == uBit.getSerialNumber();
+    return slots[(currentSlot + 1) % MICROBIT_DROPLET_SLOTS].deviceId == uBit.getSerialNumber();
 }
 
 void DropletScheduler::incrementError()

@@ -134,7 +134,7 @@ int DropletDatagram::send(uint8_t *buffer, int len)
     uint32_t t  = system_timer_current_time_us();
 
     buf.length = len + MICROBIT_DROPLET_HEADER_SIZE - 1;
-    buf.deviceIdentifier = uBit.getSerialNumber();
+    buf.deviceId = uBit.getSerialNumber();
     buf.startTime = t;
 
     std::ostringstream ss;
@@ -183,7 +183,7 @@ int DropletDatagram::send(ManagedString data)
 
 void DropletDatagram::networkDiscovery(DropletFrameBuffer *packet) 
 {
-    uint8_t slotId = packet->slotIdentifier;
+    uint8_t slotId = packet->slotId;
 
     if (Droplet::instance->getDropletStatus() == DropletStatus::Initialisation)
     {
@@ -196,7 +196,7 @@ void DropletDatagram::networkDiscovery(DropletFrameBuffer *packet)
         //uint8_t hops = packet->initialTtl - packet->ttl;
         //uint32_t transmission = (packet->length);
     }
-    else if (Droplet::instance->getDropletStatus() == DropletStatus::Discovery && packet->deviceIdentifier != uBit.getSerialNumber() && (packet->flags & MICROBIT_DROPLET_ADVERT) == 0)
+    else if (Droplet::instance->getDropletStatus() == DropletStatus::Discovery && packet->deviceId != uBit.getSerialNumber() && (packet->flags & MICROBIT_DROPLET_ADVERT) == 0)
     {
         // TODO: Potential bug - if a slot if dropped in the middle it could cause this to never complete, must check!
         // Probably just better to wait for all the slots to go

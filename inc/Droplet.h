@@ -107,11 +107,11 @@ namespace codal
     struct DropletFrameBuffer
     {
         uint8_t length;                             // The length of the remaining bytes in the packet. includes protocol/version/group fields, excluding the length field itself.
-        uint8_t slotIdentifier;
-        uint8_t frameIdentifier:4, flags:4;
+        uint8_t slotId;
+        uint8_t frameId:4, flags:4;
         uint8_t protocol; // Don't move position, it has to be the 4th byte
         uint8_t ttl:4, initialTtl:4;
-        uint64_t deviceIdentifier;
+        uint64_t deviceId;
         unsigned long startTime;
 
         uint8_t payload[MICROBIT_DROPLET_MAX_PACKET_SIZE];    // User / higher layer protocol data

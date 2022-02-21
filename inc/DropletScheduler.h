@@ -33,8 +33,8 @@ namespace codal
 {
     struct DropletSlot
     {
-        uint64_t deviceIdentifier;
-        uint8_t slotIdentifier;
+        uint64_t deviceId;
+        uint8_t slotId;
         uint8_t expiration;
         uint8_t distance:4, flags:4;
         uint8_t errors;
