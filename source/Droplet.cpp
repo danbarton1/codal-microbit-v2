@@ -744,13 +744,18 @@ DropletFrameBuffer* Droplet::recv()
  */
 int Droplet::send(DropletFrameBuffer *buffer)
 {
+    txBuf = buffer;
+}
+
+int codal::Droplet::sendImmediate()
+{
     if (ble_running())
         return DEVICE_NOT_SUPPORTED;
 
-    if (buffer == NULL)
+    if (txBuf == NULL)
         return DEVICE_INVALID_PARAMETER;
 
-    if (buffer->length > MICROBIT_DROPLET_MAX_PACKET_SIZE + MICROBIT_DROPLET_HEADER_SIZE - 1)
+    if (txBuf->length > MICROBIT_DROPLET_MAX_PACKET_SIZE + MICROBIT_DROPLET_HEADER_SIZE - 1)
         return DEVICE_INVALID_PARAMETER;
 
     // Firstly, disable the Radio interrupt. We want to wait until the trasmission completes.
@@ -759,33 +764,38 @@ int Droplet::send(DropletFrameBuffer *buffer)
     // Turn off the transceiver.
     NRF_RADIO->EVENTS_DISABLED = 0;
     NRF_RADIO->TASKS_DISABLE = 1;
-    while(NRF_RADIO->EVENTS_DISABLED == 0);
+    while (NRF_RADIO->EVENTS_DISABLED == 0)
+        ;
 
     // Configure the radio to send the buffer provided.
-    NRF_RADIO->PACKETPTR = (uint32_t) buffer;
+    NRF_RADIO->PACKETPTR = (uint32_t)txBuf;
 
     // Turn on the transmitter, and wait for it to signal that it's ready to use.
     NRF_RADIO->EVENTS_READY = 0;
     NRF_RADIO->TASKS_TXEN = 1;
-    while (NRF_RADIO->EVENTS_READY == 0);
+    while (NRF_RADIO->EVENTS_READY == 0)
+        ;
 
     // Start transmission and wait for end of packet.
     NRF_RADIO->TASKS_START = 1;
     NRF_RADIO->EVENTS_END = 0;
-    while(NRF_RADIO->EVENTS_END == 0);
+    while (NRF_RADIO->EVENTS_END == 0)
+        ;
 
     // Return the radio to using the default receive buffer
-    NRF_RADIO->PACKETPTR = (uint32_t) rxBuf;
+    NRF_RADIO->PACKETPTR = (uint32_t)rxBuf;
 
     // Turn off the transmitter.
     NRF_RADIO->EVENTS_DISABLED = 0;
     NRF_RADIO->TASKS_DISABLE = 1;
-    while(NRF_RADIO->EVENTS_DISABLED == 0);
+    while (NRF_RADIO->EVENTS_DISABLED == 0)
+        ;
 
     // Start listening for the next packet
     NRF_RADIO->EVENTS_READY = 0;
     NRF_RADIO->TASKS_RXEN = 1;
-    while(NRF_RADIO->EVENTS_READY == 0);
+    while (NRF_RADIO->EVENTS_READY == 0)
+        ;
 
     NRF_RADIO->EVENTS_END = 0;
     NRF_RADIO->TASKS_START = 1;
@@ -793,6 +803,8 @@ int Droplet::send(DropletFrameBuffer *buffer)
     // Re-enable the Radio interrupt.
     NVIC_ClearPendingIRQ(RADIO_IRQn);
     NVIC_EnableIRQ(RADIO_IRQn);
+
+    txBuf = NULL;
 
     return DEVICE_OK;
 }

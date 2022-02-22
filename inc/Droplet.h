@@ -139,6 +139,7 @@ namespace codal
         int                     rssi;
         DropletFrameBuffer      *rxQueue;   // A linear list of incoming packets, queued awaiting processing.
         DropletFrameBuffer      *rxBuf;     // A pointer to the buffer being actively used by the RADIO hardware.
+        DropletFrameBuffer      *txBuf;    
         DropletStatus           dropletStatus;
         Timer                   &timer;
         uint8_t                 lastSlotId;
@@ -302,14 +303,20 @@ namespace codal
         DropletFrameBuffer* recv();
 
         /**
-             * Transmits the given buffer onto the broadcast radio.
-             * The call will wait until the transmission of the packet has completed before returning.
-             *
-             * @param data The packet contents to transmit.
-             *
-             * @return MICROBIT_OK on success, or MICROBIT_NOT_SUPPORTED if the BLE stack is running.
+             * Adds the buffer to the queue
+             * The buffer will be sent once it 
          */
         int send(DropletFrameBuffer *buffer);
+
+        /**
+         * Transmits the given buffer onto the broadcast radio.
+         * The call will wait until the transmission of the packet has completed before returning.
+         *
+         * @param data The packet contents to transmit.
+         *
+         * @return MICROBIT_OK on success, or MICROBIT_NOT_SUPPORTED if the BLE stack is running.
+         */
+        int sendImmediate();
 
         /**
               * Puts the component in (or out of) sleep (low power) mode.

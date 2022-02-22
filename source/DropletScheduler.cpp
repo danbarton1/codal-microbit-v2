@@ -19,7 +19,8 @@ void onNextSlotEvent(MicroBitEvent e)
     // Only do this if the slot if not free
     DropletSlot slot = DropletScheduler::instance->getSlots()[id];
 
-    if ((slot.flags & MICROBIT_DROPLET_FREE) == MICROBIT_DROPLET_FREE || (slot.flags & MICROBIT_DROPLET_ADVERT) == MICROBIT_DROPLET_ADVERT)
+    // Either has to be not free or an advertisement slot
+    if (!((slot.flags & MICROBIT_DROPLET_FREE) == MICROBIT_DROPLET_FREE) || (slot.flags & MICROBIT_DROPLET_ADVERT) == MICROBIT_DROPLET_ADVERT)
     {
         if (!Droplet::instance->isEnabled())
         {
@@ -27,6 +28,20 @@ void onNextSlotEvent(MicroBitEvent e)
         }
 
         DropletNetworkClock::instance->slotStartTime();
+        uint16_t status = DropletScheduler::instance->getCurrentSlotStatus();
+
+        // We own this slot, send the packet
+        if (status == MICROBIT_DROPLET_OWNER)
+        {
+            DMESG("Owner");
+            Droplet::instance->sendImmediate();
+        }
+        // The slot is open which means we are a participant
+        // Shouldn't have to anything but listen
+        else
+        {
+            DMESG("Participant");
+        }
     }
     else
     {
@@ -103,7 +118,7 @@ uint32_t DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
     // This way, for the next slot the entire network should be synchronised to the same slot
     if (buffer->slotId != currentSlot)
     {
-        currentSlotId = buffer->slotId;
+        currentSlot = buffer->slotId;
     }
 
     DropletSlot *slot = &slots[buffer->slotId];
@@ -317,7 +332,7 @@ uint16_t codal::DropletScheduler::nextSlotStatus()
     return MICROBIT_DROPLET_PARTICIPANT;
 }
 
-uin16_t codal::DropletScheduler::getCurrentSlotStatus()
+uint16_t codal::DropletScheduler::getCurrentSlotStatus()
 {
     DropletSlot *slot = &slots[currentSlot];
 
