@@ -99,11 +99,11 @@ DropletScheduler::DropletScheduler(Timer &timer) : currentFrame(0), timer(timer)
 
 uint32_t DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
 {
-    // TODO: If the slot in the packet is different to local slot, use the network slot
-
-    if (true)
+    // We have mismatched slot ids, assume that the networked one is correct
+    // This way, for the next slot the entire network should be synchronised to the same slot
+    if (buffer->slotId != currentSlotId)
     {
-
+        currentSlotId = buffer->slotId;
     }
 
     DropletSlot *slot = &slots[buffer->slotId];
