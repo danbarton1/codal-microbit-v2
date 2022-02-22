@@ -745,6 +745,7 @@ DropletFrameBuffer* Droplet::recv()
 int Droplet::send(DropletFrameBuffer *buffer)
 {
     txBuf = buffer;
+    return MICROBIT_OK;
 }
 
 int codal::Droplet::sendImmediate()
