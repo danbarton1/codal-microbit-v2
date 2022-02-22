@@ -75,6 +75,7 @@ namespace codal
         uint16_t sendAdvertisement(DropletSlot slot);
         uint16_t setSlot(uint8_t slotId, uint64_t deviceId);
         uint16_t nextSlotStatus();
+        uin16_t getCurrentSlotStatus();
         static DropletScheduler *instance;
     };
 };

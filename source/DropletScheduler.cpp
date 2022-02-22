@@ -101,7 +101,7 @@ uint32_t DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
 {
     // We have mismatched slot ids, assume that the networked one is correct
     // This way, for the next slot the entire network should be synchronised to the same slot
-    if (buffer->slotId != currentSlotId)
+    if (buffer->slotId != currentSlot)
     {
         currentSlotId = buffer->slotId;
     }
@@ -304,6 +304,22 @@ uint16_t codal::DropletScheduler::setSlot(uint8_t slotId, uint64_t deviceId)
 uint16_t codal::DropletScheduler::nextSlotStatus()
 {
     DropletSlot *slot = &slots[(currentSlot + 1) % MICROBIT_DROPLET_SLOTS];
+
+    if (slot->deviceId == uBit.getSerialNumber())
+    {
+        return MICROBIT_DROPLET_OWNER;
+    }
+    else if ((slot->flags & MICROBIT_DROPLET_FREE) == MICROBIT_DROPLET_FREE)
+    {
+        return MICROBIT_DROPLET_FREE;
+    }
+
+    return MICROBIT_DROPLET_PARTICIPANT;
+}
+
+uin16_t codal::DropletScheduler::getCurrentSlotStatus()
+{
+    DropletSlot *slot = &slots[currentSlot];
 
     if (slot->deviceId == uBit.getSerialNumber())
     {
