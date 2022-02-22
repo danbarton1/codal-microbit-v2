@@ -10,6 +10,7 @@ DropletScheduler* DropletScheduler::instance = nullptr;
 
 void onNextSlotEvent(MicroBitEvent e)
 {
+    DropletScheduler::instance->setIsFirstPacketToTrue();
     uint8_t id = DropletScheduler::instance->getCurrentSlot();
     id = (id + 1) % MICROBIT_DROPLET_SLOTS;
     DropletScheduler::instance->setCurrentSlot(id);
@@ -159,10 +160,12 @@ uint32_t DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
     {   
         DropletNetworkClock::instance->setNetworkTime(buffer->startTime);
         isFirstPacket = false;
+        isLastPacket = false;
     }
     // TODO: Once we get here, ignore all packets from device, even if it is its slot
     // bool isLastPacket?
     // For optimisation purposes, could be worth using uint8_t and bit packing isFirstPacket and isLastPacket
+    // Set isFirstPacket to true on next slot event
 
     // TODO: distance
     // The distance field could allow for the packets ttl to be more efficiently set
@@ -186,8 +189,7 @@ uint32_t DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
             Droplet::instance->disable();
         }
         
-        maxFrameId = frameId;
-        isFirstPacket = true;
+        maxFrameId = frameId; 
     }
 
     return MICROBIT_OK;
@@ -346,6 +348,11 @@ uint16_t codal::DropletScheduler::getCurrentSlotStatus()
     }
 
     return MICROBIT_DROPLET_PARTICIPANT;
+}
+
+void codal::DropletScheduler::setIsFirstPacketToTrue() 
+{
+    isFirstPacket = true;
 }
 
 bool DropletScheduler::isSlotMine(uint8_t id)

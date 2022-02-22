@@ -229,7 +229,7 @@ void DropletDatagram::packetReceived()
     packet->next = NULL;
     packet->ttl--;
 
-    DropletScheduler::instance->analysePacket(packet);
+    // DropletScheduler::instance->analysePacket(packet);
     networkDiscovery(packet);
 
     if (Droplet::instance->getDropletStatus() != DropletStatus::Initialisation)

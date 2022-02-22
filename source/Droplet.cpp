@@ -674,7 +674,9 @@ void Droplet::idleCallback()
         switch (p->protocol)
         {
             case MICROBIT_RADIO_PROTOCOL_DATAGRAM:
-                datagram.packetReceived();
+                uint32_t result = DropletScheduler::instance->analysePacket(p);
+                if (result == MICROBIT_OK)
+                    datagram.packetReceived();
                 break;
 
             case MICROBIT_RADIO_PROTOCOL_EVENTBUS:

@@ -54,6 +54,7 @@ namespace codal
         Timer &timer;
         uint8_t maxFrameId;
         bool isFirstPacket;
+        bool isLastPacket;
         DropletFrameBuffer *frames[MICROBIT_DROPLET_MAX_FRAMES];
         uint16_t advertCounter;
         uint16_t advertGoal;
@@ -76,6 +77,7 @@ namespace codal
         uint16_t setSlot(uint8_t slotId, uint64_t deviceId);
         uint16_t nextSlotStatus();
         uint16_t getCurrentSlotStatus();
+        void setIsFirstPacketToTrue();
         static DropletScheduler *instance;
     };
 };
