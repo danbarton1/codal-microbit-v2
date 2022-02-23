@@ -144,7 +144,7 @@ namespace codal
         Timer                   &timer;
         uint8_t                 lastSlotId;
         uint8_t                 initialSlotId;
-
+        void protocolDatagram(DropletFrameBuffer *buffer);
     public:
         DropletDatagram   datagram;   // A simple datagram service.
         DropletEvent      event;      // A simple event handling service.

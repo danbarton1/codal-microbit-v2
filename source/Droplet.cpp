@@ -303,6 +303,8 @@ extern "C" void RADIO_IRQHandler(void)
     */
 } 
 
+
+
 /**
   * Constructor.
   *
@@ -657,6 +659,21 @@ int Droplet::setGroup(uint8_t group)
     return DEVICE_OK;
 }
 
+void codal::Droplet::protocolDatagram(DropletFrameBuffer *buffer) 
+{
+    uint32_t result = DropletScheduler::instance->analysePacket(buffer);
+    if (result == MICROBIT_OK)
+        datagram.packetReceived();
+
+    // TODO: ttl--;
+    // TODO: send packet here instead of in packet received
+    // TODO: rename sendImmediate to send txBuffer
+    // TODO: create a new method called sendImmediate
+    // TODO: this method should work like the old send
+    buffer->ttl--;
+    sendImmediate(buffer);
+}
+
 /**
   * A background, low priority callback that is triggered whenever the processor is idle.
   * Here, we empty our queue of received packets, and pass them onto higher level protocol handlers.
@@ -674,20 +691,8 @@ void Droplet::idleCallback()
         switch (p->protocol)
         {
             case MICROBIT_RADIO_PROTOCOL_DATAGRAM:
-                uint32_t result = DropletScheduler::instance->analysePacket(p);
-                if (result == MICROBIT_OK)
-                    datagram.packetReceived();
-
-                // TODO: ttl--;
-                // TODO: send packet here instead of in packet received
-                // TODO: rename sendImmediate to send txBuffer
-                // TODO: create a new method called sendImmediate
-                // TODO: this method should work like the old send
-                p->ttl--;
-                sendImmediate(p);
-                
+                protocolDatagram(p);
                 break;
-
             case MICROBIT_RADIO_PROTOCOL_EVENTBUS:
                 event.packetReceived();
                 break;
