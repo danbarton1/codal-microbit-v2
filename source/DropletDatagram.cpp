@@ -227,7 +227,7 @@ void DropletDatagram::packetReceived()
 
     // We add to the tail of the queue to preserve causal ordering.
     packet->next = NULL;
-    packet->ttl--;
+    //packet->ttl--;
 
     // DropletScheduler::instance->analysePacket(packet);
     networkDiscovery(packet);
@@ -259,8 +259,8 @@ void DropletDatagram::packetReceived()
         p->next = packet;
     }
 
-    if (packet->ttl > 0)
-        radio.send(packet);
+    //if (packet->ttl > 0)
+        //radio.send(packet);
     
     Event(DEVICE_ID_RADIO, MICROBIT_RADIO_EVT_DATAGRAM);
 }

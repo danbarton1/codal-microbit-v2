@@ -144,6 +144,7 @@ namespace codal
         Timer                   &timer;
         uint8_t                 lastSlotId;
         uint8_t                 initialSlotId;
+        bool keepSlotAlive;
         void protocolDatagram(DropletFrameBuffer *buffer);
     public:
         DropletDatagram   datagram;   // A simple datagram service.
@@ -309,6 +310,10 @@ namespace codal
         int send(DropletFrameBuffer *buffer);
 
         int sendTx();
+
+        void setKeepAlive(bool alive);
+
+        bool getKeepAlive() const;
 
         /**
          * Transmits the given buffer onto the broadcast radio.

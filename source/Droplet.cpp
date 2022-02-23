@@ -313,7 +313,8 @@ extern "C" void RADIO_IRQHandler(void)
   * @note This class is demand activated, as a result most resources are only
   *       committed if send/recv or event registrations calls are made.
  */
-Droplet::Droplet(Timer &timer, uint16_t id) : timer(timer), datagram(*this), event (*this), clock(timer), scheduler(timer)
+Droplet::Droplet(Timer &timer, uint16_t id)
+    : timer(timer), datagram(*this), event(*this), clock(timer), scheduler(timer), keepSlotAlive(false)
 {
     this->id = id;
     this->status = 0;
@@ -671,7 +672,9 @@ void codal::Droplet::protocolDatagram(DropletFrameBuffer *buffer)
     // TODO: create a new method called sendImmediate
     // TODO: this method should work like the old send
     buffer->ttl--;
-    sendImmediate(buffer);
+
+    if (buffer->ttl > 0)
+        sendImmediate(buffer);
 }
 
 /**
@@ -825,10 +828,28 @@ int codal::Droplet::sendTx()
         return DEVICE_NOT_SUPPORTED;
 
     if (txBuf == NULL)
-        return DEVICE_INVALID_PARAMETER;
+    {
+        if (keepSlotAlive)
+        {
+            txBuf = new DropletFrameBuffer();
+            txBuf->length = MICROBIT_DROPLET_HEADER_SIZE - 1;
+            txBuf->flags |= MICROBIT_DROPLET_KEEP_ALIVE;
+            txBuf->slotId = DropletScheduler::instance->getCurrentSlot();
+            txBuf->deviceId = uBit.getSerialNumber();
+            txBuf->protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
+            txBuf->initialTtl = MICROBIT_DROPLET_INITIAL_TTL;
+            txBuf->ttl = MICROBIT_DROPLET_INITIAL_TTL;
+            txBuf->startTime = uBit.systemTime();        
+        }
+        else
+        {
+            return DEVICE_INVALID_PARAMETER;
+        }
+    }
+        
 
     if (txBuf->length > MICROBIT_DROPLET_MAX_PACKET_SIZE + MICROBIT_DROPLET_HEADER_SIZE - 1)
-        return DEVICE_INVALID_PARAMETER;
+        return DEVICE_INVALID_PARAMETER
 
     // Firstly, disable the Radio interrupt. We want to wait until the trasmission completes.
     NVIC_DisableIRQ(RADIO_IRQn);
@@ -874,6 +895,16 @@ int codal::Droplet::sendTx()
     txBuf = NULL;
 
     return DEVICE_OK;
+}
+
+void codal::Droplet::setKeepAlive(bool alive) 
+{  
+    keepSlotAlive = alive;
+}
+
+bool codal::Droplet::getKeepAlive() const 
+{
+    return keepSlotAlive;
 }
 
 /**
