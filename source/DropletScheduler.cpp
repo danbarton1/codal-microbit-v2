@@ -35,7 +35,7 @@ void onNextSlotEvent(MicroBitEvent e)
         if (status == MICROBIT_DROPLET_OWNER)
         {
             DMESG("Owner");
-            Droplet::instance->sendImmediate();
+            Droplet::instance->sendTx();
         }
         // The slot is open which means we are a participant
         // Shouldn't have to anything but listen

@@ -677,6 +677,15 @@ void Droplet::idleCallback()
                 uint32_t result = DropletScheduler::instance->analysePacket(p);
                 if (result == MICROBIT_OK)
                     datagram.packetReceived();
+
+                // TODO: ttl--;
+                // TODO: send packet here instead of in packet received
+                // TODO: rename sendImmediate to send txBuffer
+                // TODO: create a new method called sendImmediate
+                // TODO: this method should work like the old send
+                p->ttl--;
+                sendImmediate(p);
+                
                 break;
 
             case MICROBIT_RADIO_PROTOCOL_EVENTBUS:
@@ -750,7 +759,62 @@ int Droplet::send(DropletFrameBuffer *buffer)
     return MICROBIT_OK;
 }
 
-int codal::Droplet::sendImmediate()
+int codal::Droplet::sendImmediate(DropletFrameBuffer *buffer)
+{
+    if (ble_running())
+        return DEVICE_NOT_SUPPORTED;
+
+    if (buffer == NULL)
+        return DEVICE_INVALID_PARAMETER;
+
+    if (buffer->length > MICROBIT_DROPLET_MAX_PACKET_SIZE + MICROBIT_DROPLET_HEADER_SIZE - 1)
+        return DEVICE_INVALID_PARAMETER;
+
+    // Firstly, disable the Radio interrupt. We want to wait until the trasmission completes.
+    NVIC_DisableIRQ(RADIO_IRQn);
+
+    // Turn off the transceiver.
+    NRF_RADIO->EVENTS_DISABLED = 0;
+    NRF_RADIO->TASKS_DISABLE = 1;
+    while (NRF_RADIO->EVENTS_DISABLED == 0);
+
+    // Configure the radio to send the buffer provided.
+    NRF_RADIO->PACKETPTR = (uint32_t)buffer;
+
+    // Turn on the transmitter, and wait for it to signal that it's ready to use.
+    NRF_RADIO->EVENTS_READY = 0;
+    NRF_RADIO->TASKS_TXEN = 1;
+    while (NRF_RADIO->EVENTS_READY == 0);
+
+    // Start transmission and wait for end of packet.
+    NRF_RADIO->TASKS_START = 1;
+    NRF_RADIO->EVENTS_END = 0;
+    while (NRF_RADIO->EVENTS_END == 0);
+
+    // Return the radio to using the default receive buffer
+    NRF_RADIO->PACKETPTR = (uint32_t)rxBuf;
+
+    // Turn off the transmitter.
+    NRF_RADIO->EVENTS_DISABLED = 0;
+    NRF_RADIO->TASKS_DISABLE = 1;
+    while (NRF_RADIO->EVENTS_DISABLED == 0);
+
+    // Start listening for the next packet
+    NRF_RADIO->EVENTS_READY = 0;
+    NRF_RADIO->TASKS_RXEN = 1;
+    while (NRF_RADIO->EVENTS_READY == 0);
+
+    NRF_RADIO->EVENTS_END = 0;
+    NRF_RADIO->TASKS_START = 1;
+
+    // Re-enable the Radio interrupt.
+    NVIC_ClearPendingIRQ(RADIO_IRQn);
+    NVIC_EnableIRQ(RADIO_IRQn);
+
+    return DEVICE_OK;
+}
+
+int codal::Droplet::sendTx()
 {
     if (ble_running())
         return DEVICE_NOT_SUPPORTED;
@@ -767,8 +831,7 @@ int codal::Droplet::sendImmediate()
     // Turn off the transceiver.
     NRF_RADIO->EVENTS_DISABLED = 0;
     NRF_RADIO->TASKS_DISABLE = 1;
-    while (NRF_RADIO->EVENTS_DISABLED == 0)
-        ;
+    while (NRF_RADIO->EVENTS_DISABLED == 0);
 
     // Configure the radio to send the buffer provided.
     NRF_RADIO->PACKETPTR = (uint32_t)txBuf;
@@ -776,14 +839,12 @@ int codal::Droplet::sendImmediate()
     // Turn on the transmitter, and wait for it to signal that it's ready to use.
     NRF_RADIO->EVENTS_READY = 0;
     NRF_RADIO->TASKS_TXEN = 1;
-    while (NRF_RADIO->EVENTS_READY == 0)
-        ;
+    while (NRF_RADIO->EVENTS_READY == 0);
 
     // Start transmission and wait for end of packet.
     NRF_RADIO->TASKS_START = 1;
     NRF_RADIO->EVENTS_END = 0;
-    while (NRF_RADIO->EVENTS_END == 0)
-        ;
+    while (NRF_RADIO->EVENTS_END == 0);
 
     // Return the radio to using the default receive buffer
     NRF_RADIO->PACKETPTR = (uint32_t)rxBuf;
@@ -791,14 +852,12 @@ int codal::Droplet::sendImmediate()
     // Turn off the transmitter.
     NRF_RADIO->EVENTS_DISABLED = 0;
     NRF_RADIO->TASKS_DISABLE = 1;
-    while (NRF_RADIO->EVENTS_DISABLED == 0)
-        ;
+    while (NRF_RADIO->EVENTS_DISABLED == 0);
 
     // Start listening for the next packet
     NRF_RADIO->EVENTS_READY = 0;
     NRF_RADIO->TASKS_RXEN = 1;
-    while (NRF_RADIO->EVENTS_READY == 0)
-        ;
+    while (NRF_RADIO->EVENTS_READY == 0);
 
     NRF_RADIO->EVENTS_END = 0;
     NRF_RADIO->TASKS_START = 1;

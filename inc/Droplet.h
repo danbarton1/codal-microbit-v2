@@ -308,6 +308,8 @@ namespace codal
          */
         int send(DropletFrameBuffer *buffer);
 
+        int sendTx();
+
         /**
          * Transmits the given buffer onto the broadcast radio.
          * The call will wait until the transmission of the packet has completed before returning.
@@ -316,7 +318,7 @@ namespace codal
          *
          * @return MICROBIT_OK on success, or MICROBIT_NOT_SUPPORTED if the BLE stack is running.
          */
-        int sendImmediate();
+        int sendImmediate(DropletFrameBuffer *buffer);
 
         /**
               * Puts the component in (or out of) sleep (low power) mode.
