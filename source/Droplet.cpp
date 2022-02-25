@@ -105,8 +105,10 @@ void printState(int s)
 
 void onInitialiseEvent(MicroBitEvent e)
 {
+
     if (Droplet::instance->getDropletStatus() != DropletStatus::Initialisation)
     {
+        DMESG("Initialiation complete");
         return;
     }
     
@@ -115,7 +117,7 @@ void onInitialiseEvent(MicroBitEvent e)
     DropletFrameBuffer *buffer = new DropletFrameBuffer();
     buffer->length = MICROBIT_DROPLET_HEADER_SIZE - 1;
     buffer->flags |= MICROBIT_DROPLET_ADVERT;
-    buffer->slotId = 0;
+    buffer->slotId = MICROBIT_DROPLET_ADVERTISEMENT_SLOTS;
     buffer->deviceId = uBit.getSerialNumber();
     buffer->protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
     buffer->initialTtl = MICROBIT_DROPLET_INITIALISATION_TTL;
@@ -124,8 +126,10 @@ void onInitialiseEvent(MicroBitEvent e)
 
     DMESG("oninitevent ttl: %d", buffer->ttl);
 
+    DropletScheduler::instance->queueAdvertisement();
+
     // TODO: Keep sending
-    int result = Droplet::instance->send(buffer);
+    int result = Droplet::instance->sendImmediate(buffer);
 
     if (result == DEVICE_NOT_SUPPORTED)
         DMESG("BLE Running");
@@ -133,15 +137,15 @@ void onInitialiseEvent(MicroBitEvent e)
     if (result == DEVICE_INVALID_PARAMETER)
         DMESG("Buffer is null or Length too big");
 
-    if (result == MICROBIT_OK)
-        DMESG("OK");
+    //if (result == MICROBIT_OK)
+        //DMESG("OK");
 }
 
 uint8_t send = 0;
 
 extern "C" void RADIO_IRQHandler(void)
 {
-    //DMESG("IRQ");
+    DMESG("IRQ");
  
     if(NRF_RADIO->EVENTS_READY)
     {
@@ -313,8 +317,7 @@ extern "C" void RADIO_IRQHandler(void)
   * @note This class is demand activated, as a result most resources are only
   *       committed if send/recv or event registrations calls are made.
  */
-Droplet::Droplet(Timer &timer, uint16_t id)
-    : timer(timer), datagram(*this), event(*this), clock(timer), scheduler(timer), keepSlotAlive(false)
+Droplet::Droplet(Timer &timer, uint16_t id) : timer(timer), datagram(*this), event(*this), clock(timer), scheduler(timer)
 {
     this->id = id;
     this->status = 0;
@@ -324,6 +327,7 @@ Droplet::Droplet(Timer &timer, uint16_t id)
     this->rxQueue = nullptr;
     this->rxBuf = nullptr;
     this->dropletStatus = DropletStatus::Initialisation;
+    this->keepSlotAlive = false;
 
     instance = this;
 
@@ -663,8 +667,11 @@ int Droplet::setGroup(uint8_t group)
 void codal::Droplet::protocolDatagram(DropletFrameBuffer *buffer) 
 {
     uint32_t result = DropletScheduler::instance->analysePacket(buffer);
+
     if (result == MICROBIT_OK)
         datagram.packetReceived();
+    else
+        DMESG("Analysis packet not OK");
 
     // TODO: ttl--;
     // TODO: send packet here instead of in packet received
@@ -672,6 +679,8 @@ void codal::Droplet::protocolDatagram(DropletFrameBuffer *buffer)
     // TODO: create a new method called sendImmediate
     // TODO: this method should work like the old send
     buffer->ttl--;
+
+    DMESG("ttl: %d", buffer->ttl);
 
     if (buffer->ttl > 0)
         sendImmediate(buffer);
@@ -824,9 +833,6 @@ int codal::Droplet::sendImmediate(DropletFrameBuffer *buffer)
 
 int codal::Droplet::sendTx()
 {
-    if (ble_running())
-        return DEVICE_NOT_SUPPORTED;
-
     if (txBuf == NULL)
     {
         if (keepSlotAlive)
@@ -846,55 +852,12 @@ int codal::Droplet::sendTx()
             return DEVICE_INVALID_PARAMETER;
         }
     }
-        
 
-    if (txBuf->length > MICROBIT_DROPLET_MAX_PACKET_SIZE + MICROBIT_DROPLET_HEADER_SIZE - 1)
-        return DEVICE_INVALID_PARAMETER
-
-    // Firstly, disable the Radio interrupt. We want to wait until the trasmission completes.
-    NVIC_DisableIRQ(RADIO_IRQn);
-
-    // Turn off the transceiver.
-    NRF_RADIO->EVENTS_DISABLED = 0;
-    NRF_RADIO->TASKS_DISABLE = 1;
-    while (NRF_RADIO->EVENTS_DISABLED == 0);
-
-    // Configure the radio to send the buffer provided.
-    NRF_RADIO->PACKETPTR = (uint32_t)txBuf;
-
-    // Turn on the transmitter, and wait for it to signal that it's ready to use.
-    NRF_RADIO->EVENTS_READY = 0;
-    NRF_RADIO->TASKS_TXEN = 1;
-    while (NRF_RADIO->EVENTS_READY == 0);
-
-    // Start transmission and wait for end of packet.
-    NRF_RADIO->TASKS_START = 1;
-    NRF_RADIO->EVENTS_END = 0;
-    while (NRF_RADIO->EVENTS_END == 0);
-
-    // Return the radio to using the default receive buffer
-    NRF_RADIO->PACKETPTR = (uint32_t)rxBuf;
-
-    // Turn off the transmitter.
-    NRF_RADIO->EVENTS_DISABLED = 0;
-    NRF_RADIO->TASKS_DISABLE = 1;
-    while (NRF_RADIO->EVENTS_DISABLED == 0);
-
-    // Start listening for the next packet
-    NRF_RADIO->EVENTS_READY = 0;
-    NRF_RADIO->TASKS_RXEN = 1;
-    while (NRF_RADIO->EVENTS_READY == 0);
-
-    NRF_RADIO->EVENTS_END = 0;
-    NRF_RADIO->TASKS_START = 1;
-
-    // Re-enable the Radio interrupt.
-    NVIC_ClearPendingIRQ(RADIO_IRQn);
-    NVIC_EnableIRQ(RADIO_IRQn);
+    int result = sendImmediate(txBuf);
 
     txBuf = NULL;
 
-    return DEVICE_OK;
+    return result;
 }
 
 void codal::Droplet::setKeepAlive(bool alive) 

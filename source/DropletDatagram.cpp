@@ -139,7 +139,6 @@ int DropletDatagram::send(uint8_t *buffer, int len)
 
     std::ostringstream ss;
     ss << t;
-    DMESG("Send time: %s", ss.str().c_str());
 
     // buf.version = 1;
     // buf.group = 0;

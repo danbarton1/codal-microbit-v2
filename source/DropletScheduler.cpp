@@ -12,8 +12,14 @@ void onNextSlotEvent(MicroBitEvent e)
 {
     DropletScheduler::instance->setIsFirstPacketToTrue();
     uint8_t id = DropletScheduler::instance->getCurrentSlot();
-    id = (id + 1) % MICROBIT_DROPLET_SLOTS;
+    id++;
+
+    if (id > MICROBIT_DROPLET_SLOTS)
+        id = 0;
+
     DropletScheduler::instance->setCurrentSlot(id);
+
+    // DMESG("Current slot id: %d", id);
 
     DropletScheduler::instance->deleteFrames();
 
@@ -34,18 +40,19 @@ void onNextSlotEvent(MicroBitEvent e)
         // We own this slot, send the packet
         if (status == MICROBIT_DROPLET_OWNER)
         {
-            DMESG("Owner");
+            DMESG("Owner - slot id: %d", id);
             Droplet::instance->sendTx();
         }
         // The slot is open which means we are a participant
         // Shouldn't have to anything but listen
         else
         {
-            DMESG("Participant");
+            DMESG("Participant - slot id: %d", id);
         }
     }
     else
     {
+        //DMESG("Empty slot");
         if (Droplet::instance->isEnabled())
         {
             Droplet::instance->disable();
@@ -107,40 +114,78 @@ DropletScheduler::DropletScheduler(Timer &timer) : currentFrame(0), timer(timer)
 
     instance = this;
 
+    this->isFirstPacket = true;
+
     this->timer.eventEvery(1000, DEVICE_ID_RADIO, MICROBIT_DROPLET_EXPIRATION_EVENT);
     uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_EXPIRATION_EVENT, onExpirationCounterEvent);
-    //uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_SCHEDULE_EVENT, onNextSlotEvent);
-    uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_WAKE_UP_EVENT, onRadioWakeUpEvent);
+    uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_SCHEDULE_EVENT, onNextSlotEvent);
+    //uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_WAKE_UP_EVENT, onRadioWakeUpEvent);
 }
 
 uint32_t DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
 {
+    DMESG("Analysing packet...");
     // We have mismatched slot ids, assume that the networked one is correct
     // This way, for the next slot the entire network should be synchronised to the same slot
     if (buffer->slotId != currentSlot)
     {
+        DMESG("Mismatch slot id");
         currentSlot = buffer->slotId;
     }
 
     DropletSlot *slot = &slots[buffer->slotId];
 
     // Invalid packet
-    if (slot->deviceId != buffer->deviceId)
+    // TODO: If we haven't synced to the network, this will always return
+    if (slot->deviceId != buffer->deviceId && Droplet::instance->getDropletStatus() == DropletStatus::Synchronised)
     {
         slot->errors++;
+        DMESG("Invalid device id");
         return MICROBIT_INVALID_PARAMETER;
     }
 
     // Duplicate packet
     if (frames[buffer->frameId])
     {
+        DMESG("Duplicate packet");
         return MICROBIT_DROPLET_DUPLICATE_PACKET;
     }
 
     // We have received an advertisement packet
     // Add it to our local schedule
+    // TODO: instead of waiting for the last packet to be received to calculate the time for the next slot
+    // TODO: we should calculate it on the first slot
+    // TODO: this way if any packet loss occurs
+    // TODO: it will still work
+    // TODO: and it allows for the time to be calculated off the advert packets
+
+    if (isFirstPacket)
+    {   
+
+        DropletNetworkClock::instance->setNetworkTime(buffer->startTime);
+        isFirstPacket = false;
+        isLastPacket = false;
+
+        // uint8_t slotsToSleepFor = getSlotsToSleepFor();
+
+        // timeToNextSlot + slotsToSleepFor * MICROBIT_DROPLET_SLOT_DURATION - preparationWindow
+        // TODO: Only update the time if this is the first packet
+        // TODO: getNetworkTime() should actually be the local time (synced to the network)
+        //uint32_t t = (DropletNetworkClock::instance->getPredictedNetworkTime() + (slotsToSleepFor + 1) * MICROBIT_DROPLET_SLOT_DURATION_MILLISECONDS) /** 1000 */- MICROBIT_DROPLET_PREPARATION_WINDOW_MICROSECONDS;
+        //timer.eventAfterUs(t, DEVICE_ID_RADIO, MICROBIT_DROPLET_WAKE_UP_EVENT); 
+        uint32_t t = DropletNetworkClock::instance->getPredictedNetworkTime() + MICROBIT_DROPLET_SLOT_DURATION_MILLISECONDS - MICROBIT_DROPLET_PREPARATION_WINDOW_MICROSECONDS;
+        DMESG("Time until next slot: %d", t);
+        // TODO: disable the event first?
+        system_timer_event_every_us(t, DEVICE_ID_RADIO, MICROBIT_DROPLET_SCHEDULE_EVENT);
+
+        // TODO: currentSlot is also modified in nextSlotEvent
+        // TODO: could cause issues
+        // currentSlot = (currentSlot + slotsToSleepFor) % MICROBIT_DROPLET_SLOTS;
+    }
+
     if ((buffer->flags & MICROBIT_DROPLET_ADVERT) == MICROBIT_DROPLET_ADVERT)
     {
+        DMESG("Advert packet received in scheduler - slot id: %d", buffer->slotId);
         setSlot(buffer->slotId, buffer->deviceId);
         return MICROBIT_OK;
     }
@@ -156,12 +201,7 @@ uint32_t DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
     // But it will be kept just in case
     slot->expiration = MICROBIT_DROPLET_EXPIRATION;
 
-    if (isFirstPacket)
-    {   
-        DropletNetworkClock::instance->setNetworkTime(buffer->startTime);
-        isFirstPacket = false;
-        isLastPacket = false;
-    }
+    
     // TODO: Once we get here, ignore all packets from device, even if it is its slot
     // bool isLastPacket?
     // For optimisation purposes, could be worth using uint8_t and bit packing isFirstPacket and isLastPacket
@@ -175,19 +215,7 @@ uint32_t DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
     {
         // We have received the last packet, so shut down the radio
         // TODO: Only do this if the next slot is empty
-        uint8_t slotsToSleepFor = getSlotsToSleepFor();
-
-        if (slotsToSleepFor > 0)
-        {
-            // timeToNextSlot + slotsToSleepFor * MICROBIT_DROPLET_SLOT_DURATION - preparationWindow
-            // TODO: Only update the time if this is the first packet
-            // TODO: getNetworkTime() should actually be the local time (synced to the network)
-            uint32_t t = (DropletNetworkClock::instance->getPredictedNetworkTime() + slotsToSleepFor * MICROBIT_DROPLET_SLOT_DURATION_MILLISECONDS) * 1000 - MICROBIT_DROPLET_PREPARATION_WINDOW_MICROSECONDS;
-            //timer.eventAfterUs(t, DEVICE_ID_RADIO, MICROBIT_DROPLET_WAKE_UP_EVENT); 
-            system_timer_event_every_us(t, DEVICE_ID_RADIO, MICROBIT_DROPLET_WAKE_UP_EVENT);
-            currentSlot = (currentSlot + slotsToSleepFor) % MICROBIT_DROPLET_SLOTS;
-            Droplet::instance->disable();
-        }
+        
         
         maxFrameId = frameId; 
     }
@@ -236,6 +264,8 @@ void DropletScheduler::queueAdvertisement()
     // Pick a free slot
     // Send request
 
+    DMESG("Queueing advertisement");
+
     int num = microbit_random(4) + 1;
     advertGoal = advertCounter + num;
 
@@ -256,8 +286,11 @@ uint16_t codal::DropletScheduler::sendAdvertisement(DropletSlot slot)
     {
         advertCounter++;
 
+        DMESG("Advert counter: %d", advertCounter);
+
         if (advertCounter >= advertGoal && sendAdvertPacket)
         {
+            DMESG("Sending advertisement...");
             uint8_t slot;
 
             uint32_t result = getFirstFreeSlot(slot);
@@ -290,6 +323,7 @@ uint16_t codal::DropletScheduler::sendAdvertisement(DropletSlot slot)
             else
             {
                 // Maybe try again?
+                DMESG("No free slot");
                 return MICROBIT_DROPLET_NO_SLOTS;
             }
         }
