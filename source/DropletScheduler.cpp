@@ -102,6 +102,8 @@ void onRadioWakeUpEvent(MicroBitEvent e)
 
 DropletScheduler::DropletScheduler(Timer &timer) : currentFrame(0), timer(timer), frames(), advertCounter(0)
 {
+    deleteFrames();
+
     for (int i = 0; i < MICROBIT_DROPLET_ADVERTISEMENT_SLOTS; i++)
     {
         slots[i].flags |= MICROBIT_DROPLET_ADVERT;
@@ -115,7 +117,7 @@ DropletScheduler::DropletScheduler(Timer &timer) : currentFrame(0), timer(timer)
     instance = this;
 
     this->isFirstPacket = true;
-
+    this->currentSlot = MICROBIT_DROPLET_ADVERTISEMENT_SLOTS;
     this->timer.eventEvery(1000, DEVICE_ID_RADIO, MICROBIT_DROPLET_EXPIRATION_EVENT);
     uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_EXPIRATION_EVENT, onExpirationCounterEvent);
     uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_SCHEDULE_EVENT, onNextSlotEvent);
@@ -129,7 +131,7 @@ uint32_t DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
     // This way, for the next slot the entire network should be synchronised to the same slot
     if (buffer->slotId != currentSlot)
     {
-        DMESG("Mismatch slot id");
+        DMESG("Mismatch slot id - buf: %d, cur: %d", buffer->slotId, currentSlot);
         currentSlot = buffer->slotId;
     }
 
@@ -145,7 +147,7 @@ uint32_t DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
     }
 
     // Duplicate packet
-    if (frames[buffer->frameId])
+    if (frames[buffer->frameId] == nullptr)
     {
         DMESG("Duplicate packet");
         return MICROBIT_DROPLET_DUPLICATE_PACKET;
@@ -247,7 +249,7 @@ uint32_t codal::DropletScheduler::getFirstFreeSlot(uint8_t &slotId)
 {
     for (DropletSlot slot : slots)
     {
-        if ((slot.flags & MICROBIT_DROPLET_FREE) == MICROBIT_DROPLET_FREE)
+        if ((slot.flags & MICROBIT_DROPLET_FREE) == MICROBIT_DROPLET_FREE && (slot.flags & MICROBIT_DROPLET_ADVERT) != MICROBIT_DROPLET_ADVERT)
         {
             slotId = slot.slotId;
             return MICROBIT_OK;
@@ -276,7 +278,7 @@ void codal::DropletScheduler::deleteFrames()
 {   
     for (int i = 0; i < MICROBIT_DROPLET_MAX_FRAMES; i++)
     {
-        delete frames[i];
+        frames[i] = nullptr;
     }
 }
 
