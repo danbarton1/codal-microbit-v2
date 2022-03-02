@@ -188,6 +188,36 @@ extern "C" void RADIO_IRQHandler(void)
         // Start listening and wait for the END event
         NRF_RADIO->TASKS_START = 1;
     }
+
+    DropletFrameBuffer *buffer = Droplet::instance->getRxBuf();
+    buffer->ttl--;
+
+    if (buffer->ttl <= 0)
+    {
+        return;
+    }
+
+    NRF_RADIO->TASKS_STOP = 1;
+
+    buffer->protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
+    NRF_RADIO->PACKETPTR = (uint32_t)buffer;
+
+    NRF_RADIO->EVENTS_READY = 0;
+    NRF_RADIO->TASKS_TXEN = 1;
+    while(NRF_RADIO->EVENTS_READY == 0); // TXRU
+    
+    NRF_RADIO->TASKS_START = 1;
+    NRF_RADIO->EVENTS_END = 0;
+    while (NRF_RADIO->EVENTS_END == 0); // TX
+
+    NRF_RADIO->EVENTS_DISABLED = 0;
+    NRF_RADIO->TASKS_DISABLE = 1;
+    while(NRF_RADIO->EVENTS_DISABLED == 0); // TXDISABLE
+
+    NRF_RADIO->EVENTS_READY = 0;
+    NRF_RADIO->TASKS_RXEN = 1;
+    while(NRF_RADIO->EVENTS_READY == 0); // RXIDLE
+
         /*
     printState(NRF_RADIO->STATE);
 
@@ -266,13 +296,7 @@ extern "C" void RADIO_IRQHandler(void)
     DMESG("Transmitting... %d", send);
 
     printState(NRF_RADIO->STATE); // RX
-    // Turn off the transceiver.
-    NRF_RADIO->EVENTS_DISABLED = 0;
-    NRF_RADIO->TASKS_DISABLE = 1;
-    printState(NRF_RADIO->STATE); // RXDISABLE
-    while(NRF_RADIO->EVENTS_DISABLED == 0);
-    printState(NRF_RADIO->STATE); // Disabled
-    NRF_RADIO->PACKETPTR = (uint32_t)dfb;
+   
 
     NRF_RADIO->EVENTS_READY = 0;
     NRF_RADIO->TASKS_TXEN = 1;

@@ -1,6 +1,7 @@
 #include "DropletScheduler.h"
 #include "Droplet.h"
 #include "MicroBit.h"
+#include <sstream>
 
 using namespace codal;
 
@@ -45,9 +46,15 @@ void onNextSlotEvent(MicroBitEvent e)
         }
         // The slot is open which means we are a participant
         // Shouldn't have to anything but listen
+        else if ((slot.flags & MICROBIT_DROPLET_ADVERT) == MICROBIT_DROPLET_ADVERT)
+        {
+            DMESG("Advert - slot id: %d", id);
+        }
         else
         {
-            DMESG("Participant - slot id: %d", id);
+            std::ostringstream ss;
+            ss << slot.deviceId;
+            DMESG("Participant - slot id: %d device id: %s", id, ss.str().c_str());
         }
     }
     else
@@ -117,6 +124,8 @@ DropletScheduler::DropletScheduler(Timer &timer) : currentFrame(0), timer(timer)
     instance = this;
 
     this->isFirstPacket = true;
+    this->sendAdvertPacket = true;
+    this->advertGoal = 0;
     this->currentSlot = MICROBIT_DROPLET_ADVERTISEMENT_SLOTS;
     this->timer.eventEvery(1000, DEVICE_ID_RADIO, MICROBIT_DROPLET_EXPIRATION_EVENT);
     uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_EXPIRATION_EVENT, onExpirationCounterEvent);
@@ -147,9 +156,12 @@ uint32_t DropletScheduler::analysePacket(DropletFrameBuffer *buffer)
     }
 
     // Duplicate packet
-    if (frames[buffer->frameId] == nullptr)
+    // Every slot the frames (should) be wiped
+    // This means that every frame should be nullptr
+    // If the frame is not nullptr, we have received a duplicate packet
+    if (frames[buffer->frameId] != nullptr)
     {
-        DMESG("Duplicate packet");
+        DMESG("Duplicate packet - frame id: ", buffer->frameId);
         return MICROBIT_DROPLET_DUPLICATE_PACKET;
     }
 
@@ -242,7 +254,8 @@ uint8_t DropletScheduler::getSlotsToSleepFor()
 
 void DropletScheduler::markSlotAsTaken(uint8_t id)
 {
-    slots[MICROBIT_DROPLET_ADVERTISEMENT_SLOTS + id - 1].flags &= ~MICROBIT_DROPLET_FREE; 
+    DMESG("mark slot - slot id: %d", id);
+    slots[id].flags &= ~MICROBIT_DROPLET_FREE; 
 }
 
 uint32_t codal::DropletScheduler::getFirstFreeSlot(uint8_t &slotId)
@@ -288,7 +301,7 @@ uint16_t codal::DropletScheduler::sendAdvertisement(DropletSlot slot)
     {
         advertCounter++;
 
-        DMESG("Advert counter: %d", advertCounter);
+        DMESG("Advert counter: %d Advert goal: %d", advertCounter, advertGoal);
 
         if (advertCounter >= advertGoal && sendAdvertPacket)
         {
@@ -345,6 +358,14 @@ uint16_t codal::DropletScheduler::setSlot(uint8_t slotId, uint64_t deviceId)
     {
         return MICROBIT_DROPLET_ERROR;
     }
+
+    // If the slot is already taken, return error
+    if ((slots[slotId].flags & MICROBIT_DROPLET_FREE) != MICROBIT_DROPLET_FREE)
+    {
+        return MICROBIT_DROPLET_ERROR;
+    }
+
+    DMESG("setSlot slotId: %d", slotId);
 
     slots[slotId].slotId = slotId;
     slots[slotId].deviceId = deviceId;
