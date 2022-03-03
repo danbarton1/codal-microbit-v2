@@ -123,6 +123,7 @@ void onInitialiseEvent(MicroBitEvent e)
     buffer->initialTtl = MICROBIT_DROPLET_INITIALISATION_TTL;
     buffer->ttl = MICROBIT_DROPLET_INITIALISATION_TTL;
     buffer->startTime = uBit.systemTime();
+    buffer->frameId = 0;
 
     DMESG("oninitevent ttl: %d", buffer->ttl);
 
@@ -189,6 +190,7 @@ extern "C" void RADIO_IRQHandler(void)
         NRF_RADIO->TASKS_START = 1;
     }
 
+    /*
     DropletFrameBuffer *buffer = Droplet::instance->getRxBuf();
     buffer->ttl--;
 
@@ -216,7 +218,7 @@ extern "C" void RADIO_IRQHandler(void)
 
     NRF_RADIO->EVENTS_READY = 0;
     NRF_RADIO->TASKS_RXEN = 1;
-    while(NRF_RADIO->EVENTS_READY == 0); // RXIDLE
+    while(NRF_RADIO->EVENTS_READY == 0); // RXIDLE */
 
         /*
     printState(NRF_RADIO->STATE);
