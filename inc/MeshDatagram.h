@@ -23,11 +23,11 @@ Copyright (c) 2016 British Broadcasting Corporation.
         DEALINGS IN THE SOFTWARE.
             */
 
-#ifndef MICROBIT_DROPLET_DATAGRAM_H
-#define MICROBIT_DROPLET_DATAGRAM_H
+#ifndef MICROBIT_MESH_DATAGRAM_H
+#define MICROBIT_MESH_DATAGRAM_H
 
 #include "CodalConfig.h"
-#include "Droplet.h"
+#include "Mesh.h"
 #include "ManagedString.h"
 
 namespace codal
@@ -43,10 +43,10 @@ namespace codal
      * teaching aid to demonstrate how simple communications operates, and to provide a sandpit through which learning can take place.
      * For serious applications, BLE should be considered a substantially more secure alternative.
      */
-    class DropletDatagram
+    class MeshDatagram
     {
-        Droplet   &radio;     // The underlying radio module used to send and receive data.
-        DropletFrameBuffer     *rxQueue;   // A linear list of incoming packets, queued awaiting processing.
+        Mesh   &radio;     // The underlying radio module used to send and receive data.
+        MeshFrameBuffer     *rxQueue;   // A linear list of incoming packets, queued awaiting processing.
 
     public:
 
@@ -58,7 +58,7 @@ namespace codal
          *
          * @param r The underlying radio module used to send and receive data.
          */
-        DropletDatagram(Droplet &r);
+        MeshDatagram(Mesh &r);
 
         /**
          * Retrieves packet payload data into the given buffer.
@@ -95,7 +95,7 @@ namespace codal
          * @param len The number of bytes to transmit.
          *
          * @return MICROBIT_OK on success, or MICROBIT_INVALID_PARAMETER if the buffer is invalid,
-         *         or the number of bytes to transmit is greater than `MICROBIT_RADIO_MAX_PACKET_SIZE + MICROBIT_DROPLET_HEADER_SIZE`.
+         *         or the number of bytes to transmit is greater than `MICROBIT_RADIO_MAX_PACKET_SIZE + MICROBIT_MESH_HEADER_SIZE`.
          */
         int send(uint8_t *buffer, int len);
 
@@ -108,7 +108,7 @@ namespace codal
          * @param data The packet contents to transmit.
          *
          * @return MICROBIT_OK on success, or MICROBIT_INVALID_PARAMETER if the buffer is invalid,
-         *         or the number of bytes to transmit is greater than `MICROBIT_RADIO_MAX_PACKET_SIZE + MICROBIT_DROPLET_HEADER_SIZE`.
+         *         or the number of bytes to transmit is greater than `MICROBIT_RADIO_MAX_PACKET_SIZE + MICROBIT_MESH_HEADER_SIZE`.
          */
         int send(PacketBuffer data);
 
@@ -121,11 +121,11 @@ namespace codal
          * @param data The packet contents to transmit.
          *
          * @return MICROBIT_OK on success, or MICROBIT_INVALID_PARAMETER if the buffer is invalid,
-         *         or the number of bytes to transmit is greater than `MICROBIT_RADIO_MAX_PACKET_SIZE + MICROBIT_DROPLET_HEADER_SIZE`.
+         *         or the number of bytes to transmit is greater than `MICROBIT_RADIO_MAX_PACKET_SIZE + MICROBIT_MESH_HEADER_SIZE`.
          */
         int send(ManagedString data);
 
-        void networkDiscovery(DropletFrameBuffer *buffer);
+        void networkDiscovery(MeshFrameBuffer *buffer);
 
         /**
          * Protocol handler callback. This is called when the radio receives a packet marked as a datagram.

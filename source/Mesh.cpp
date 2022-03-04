@@ -24,14 +24,14 @@ Copyright (c) 2016 British Broadcasting Corporation.
             */
 
 #include <string>
-#include "Droplet.h"
+#include "Mesh.h"
 #include "MicroBitDevice.h"
 #include "CodalComponent.h"
 #include "ErrorNo.h"
 #include "CodalFiber.h"
 #include "nrf.h"
 #include "MicroBit.h"
-#include "DropletScheduler.h"
+#include "MeshScheduler.h"
 
 using namespace codal;
 
@@ -62,12 +62,12 @@ const uint8_t MICROBIT_RADIO_POWER_LEVEL[] = {0xD8, 0xD8, 0xEC, 0xF0, 0xF4, 0xF8
   * For serious applications, BLE should be considered a substantially more secure alternative.
  */
 
-Droplet* Droplet::instance = nullptr;
+Mesh* Mesh::instance = nullptr;
 
-#define DROPLET_RECEIVE 1
-#define DROPLET_TRANSMIT 2
+#define MESH_RECEIVE 1
+#define MESH_TRANSMIT 2
 
-volatile uint8_t radioState = DROPLET_RECEIVE; 
+volatile uint8_t radioState = MESH_RECEIVE; 
 
 void printState(int s)
 {
@@ -103,45 +103,6 @@ void printState(int s)
     }
 }
 
-void onInitialiseEvent(MicroBitEvent e)
-{
-
-    if (Droplet::instance->getDropletStatus() != DropletStatus::Initialisation)
-    {
-        DMESG("Initialiation complete");
-        return;
-    }
-    
-    DMESG("Initialisation failed");
-
-    DropletFrameBuffer *buffer = new DropletFrameBuffer();
-    buffer->length = MICROBIT_DROPLET_HEADER_SIZE - 1;
-    buffer->flags |= MICROBIT_DROPLET_ADVERT;
-    buffer->slotId = MICROBIT_DROPLET_ADVERTISEMENT_SLOTS;
-    buffer->deviceId = uBit.getSerialNumber();
-    buffer->protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
-    buffer->initialTtl = MICROBIT_DROPLET_INITIALISATION_TTL;
-    buffer->ttl = MICROBIT_DROPLET_INITIALISATION_TTL;
-    buffer->startTime = uBit.systemTime();
-    buffer->frameId = 0;
-
-    DMESG("oninitevent ttl: %d", buffer->ttl);
-
-    DropletScheduler::instance->queueAdvertisement();
-
-    // TODO: Keep sending
-    int result = Droplet::instance->sendImmediate(buffer);
-
-    if (result == DEVICE_NOT_SUPPORTED)
-        DMESG("BLE Running");
-    
-    if (result == DEVICE_INVALID_PARAMETER)
-        DMESG("Buffer is null or Length too big");
-
-    //if (result == MICROBIT_OK)
-        //DMESG("OK");
-}
-
 uint8_t send = 0;
 
 extern "C" void RADIO_IRQHandler(void)
@@ -163,174 +124,27 @@ extern "C" void RADIO_IRQHandler(void)
         NRF_RADIO->EVENTS_END = 0;
         if(NRF_RADIO->CRCSTATUS == 1)
         {
-            //printState(NRF_RADIO->STATE);
             int sample = (int)NRF_RADIO->RSSISAMPLE;
 
             // Associate this packet's rssi value with the data just
             // transferred by DMA receive
-            Droplet::instance->setRSSI(-sample);
+            Mesh::instance->setRSSI(-sample);
 
             // Now move on to the next buffer, if possible.
             // The queued packet will get the rssi value set above.
-            Droplet::instance->queueRxBuf();
+            Mesh::instance->queueRxBuf();
 
             // Set the new buffer for DMA
-            NRF_RADIO->PACKETPTR = (uint32_t)Droplet::instance->getRxBuf();
-            //NRF_RADIO->PACKETPTR = (uint32_t)buffer;
-            //while(NRF_RADIO->EVENTS_END == 0);
-            //printState(NRF_RADIO->STATE);
+            NRF_RADIO->PACKETPTR = (uint32_t)Mesh::instance->getRxBuf();
         }
         else
         {
-            Droplet::instance->setRSSI(0); 
-            DropletScheduler::instance->incrementError();
+            Mesh::instance->setRSSI(0); 
         }
 
         // Start listening and wait for the END event
         NRF_RADIO->TASKS_START = 1;
     }
-
-    /*
-    DropletFrameBuffer *buffer = Droplet::instance->getRxBuf();
-    buffer->ttl--;
-
-    if (buffer->ttl <= 0)
-    {
-        return;
-    }
-
-    NRF_RADIO->TASKS_STOP = 1;
-
-    buffer->protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
-    NRF_RADIO->PACKETPTR = (uint32_t)buffer;
-
-    NRF_RADIO->EVENTS_READY = 0;
-    NRF_RADIO->TASKS_TXEN = 1;
-    while(NRF_RADIO->EVENTS_READY == 0); // TXRU
-    
-    NRF_RADIO->TASKS_START = 1;
-    NRF_RADIO->EVENTS_END = 0;
-    while (NRF_RADIO->EVENTS_END == 0); // TX
-
-    NRF_RADIO->EVENTS_DISABLED = 0;
-    NRF_RADIO->TASKS_DISABLE = 1;
-    while(NRF_RADIO->EVENTS_DISABLED == 0); // TXDISABLE
-
-    NRF_RADIO->EVENTS_READY = 0;
-    NRF_RADIO->TASKS_RXEN = 1;
-    while(NRF_RADIO->EVENTS_READY == 0); // RXIDLE */
-
-        /*
-    printState(NRF_RADIO->STATE);
-
-    DropletFrameBuffer *buffer = new DropletFrameBuffer();
-
-    // RXIDLE
-    // TASKS_START
-    // RX
-    // DISABLED
-
-    DMESG("Receiving...");
-
-    //NRF_RADIO->PACKETPTR = (uint32_t)buffer;
-    //NRF_RADIO->EVENTS_DISABLED = 0;
-    //NRF_RADIO->TASKS_DISABLE = 1;
-    //printState(NRF_RADIO->STATE); 
-    //while(NRF_RADIO->EVENTS_DISABLED == 0);
-
-    //DMESG("Buffer: %d", buffer->ttl--);
-
-    
-    
-
-   
-    NRF_RADIO->EVENTS_READY = 0;
-    NRF_RADIO->TASKS_RXEN = 1;
-    while (NRF_RADIO->EVENTS_READY == 0);
-
-    NRF_RADIO->EVENTS_END = 0;
-    NRF_RADIO->TASKS_START = 1;
-    while (NRF_RADIO->EVENTS_END == 0);
-
-    if (NRF_RADIO->CRCSTATUS == 1)
-    {
-        NRF_RADIO->PACKETPTR = (uint32_t)buffer;
-    }
-
-    NRF_RADIO->EVENTS_DISABLED = 0;
-    NRF_RADIO->TASKS_DISABLE = 1;
-    while (NRF_RADIO->EVENTS_DISABLED == 0);
-
-    DMESG("Received!"); 
-    
-    //DMESG("ttl: %d", buffer->ttl);
-    //ropletFrameBuffer *buffer = Droplet::instance->recv();
-    //DropletFrameBuffer *buffer = Droplet::instance->rxQueue->next;
-    //DMESG("Radio_IRQHandler ttl: %d", buffer->ttl);
-
-    //buffer->ttl--;
-
-    //if (buffer->ttl < 0) 
-      //  return;
-
-    //Droplet::instance->send(buffer);
-
-    //  TASKS_START 
-    // Use this to hopefully (!) send the packet
-    
-
-
-    if (send > 2)
-        return;
-
-    send++;
-
-    DropletFrameBuffer *dfb = new DropletFrameBuffer();
-    dfb->length = MICROBIT_DROPLET_HEADER_SIZE - 1;
-    dfb->flags |= 1;
-    dfb->slotIdentifier = 0;
-    dfb->deviceIdentifier = uBit.getSerialNumber();
-    dfb->protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
-    dfb->initialTtl = MICROBIT_DROPLET_INITIALISATION_TTL;
-    dfb->ttl = send;
-    dfb->startTime = uBit.systemTime();
-
-    DMESG("Transmitting... %d", send);
-
-    printState(NRF_RADIO->STATE); // RX
-   
-
-    NRF_RADIO->EVENTS_READY = 0;
-    NRF_RADIO->TASKS_TXEN = 1;
-    printState(NRF_RADIO->STATE); // TXRU
-    while (NRF_RADIO->EVENTS_READY == 0);
-    printState(NRF_RADIO->STATE); // TXIDLE
-    NRF_RADIO->TASKS_START = 1;
-    NRF_RADIO->EVENTS_END = 0;
-    printState(NRF_RADIO->STATE); // TX
-    while(NRF_RADIO->EVENTS_END == 0);
-    // Return the radio to using the default receive buffer
-    NRF_RADIO->PACKETPTR = (uint32_t)Droplet::instance->getRxBuf();
-
-    
-    // Turn off the transmitter.
-    NRF_RADIO->EVENTS_DISABLED = 0;
-    NRF_RADIO->TASKS_DISABLE = 1;
-    printState(NRF_RADIO->STATE); // TXDISABLE
-    while(NRF_RADIO->EVENTS_DISABLED == 0);
-    printState(NRF_RADIO->STATE); // Disabled
-    // Start listening for the next packet
-    NRF_RADIO->EVENTS_READY = 0;
-    NRF_RADIO->TASKS_RXEN = 1;
-    while(NRF_RADIO->EVENTS_READY == 0);
-    printState(NRF_RADIO->STATE); // RXIDLE
-    //NRF_RADIO->EVENTS_END = 0;
-    //NRF_RADIO->TASKS_START = 1;
-
-    //printState(NRF_RADIO->STATE); // RX 
-    
-    DMESG("Transmitted!"); 
-    */
 } 
 
 
@@ -343,7 +157,7 @@ extern "C" void RADIO_IRQHandler(void)
   * @note This class is demand activated, as a result most resources are only
   *       committed if send/recv or event registrations calls are made.
  */
-Droplet::Droplet(Timer &timer, uint16_t id) : timer(timer), datagram(*this), event(*this), clock(timer), scheduler(timer)
+Mesh::Mesh(Timer &timer, uint16_t id) : timer(timer), datagram(*this), event(*this), scheduler(timer)
 {
     this->id = id;
     this->status = 0;
@@ -352,24 +166,12 @@ Droplet::Droplet(Timer &timer, uint16_t id) : timer(timer), datagram(*this), eve
     this->rssi = 0;
     this->rxQueue = nullptr;
     this->rxBuf = nullptr;
-    this->dropletStatus = DropletStatus::Initialisation;
-    this->keepSlotAlive = false;
 
     instance = this;
 
     NVIC_SetPriority(RADIO_IRQn, 0);
 	NVIC_ClearPendingIRQ(RADIO_IRQn);
 	NVIC_EnableIRQ(RADIO_IRQn);
-}
-
-bool Droplet::checkSlotWindow(uint8_t slotId)
-{
-    return scheduler.isSlotMine(slotId);
-}
-
-int Droplet::setTimeToLive(uint8_t ttl)
-{
-    return MICROBIT_OK;
 }
 
 /**
@@ -379,7 +181,7 @@ int Droplet::setTimeToLive(uint8_t ttl)
   *
   * @return DEVICE_OK on success, or DEVICE_INVALID_PARAMETER if the value is out of range.
  */
-int Droplet::setTransmitPower(int power)
+int Mesh::setTransmitPower(int power)
 {
     if (power < 0 || power >= MICROBIT_RADIO_POWER_LEVELS)
         return DEVICE_INVALID_PARAMETER;
@@ -397,7 +199,7 @@ int Droplet::setTransmitPower(int power)
   * @return DEVICE_OK on success, or DEVICE_INVALID_PARAMETER if the value is out of range,
   *         or DEVICE_NOT_SUPPORTED if the BLE stack is running.
  */
-int Droplet::setFrequencyBand(int band)
+int Mesh::setFrequencyBand(int band)
 {
     if (ble_running())
         return DEVICE_NOT_SUPPORTED;
@@ -416,45 +218,9 @@ int Droplet::setFrequencyBand(int band)
   *
   * @return a pointer to the current receive buffer.
  */
-DropletFrameBuffer* Droplet::getRxBuf()
+MeshFrameBuffer* Mesh::getRxBuf()
 {
     return rxBuf;
-}
-
-DropletStatus Droplet::getDropletStatus()
-{
-    return dropletStatus;
-}
-
-void Droplet::setDropletStatus(DropletStatus status)
-{
-    dropletStatus = status;
-}
-
-void Droplet::setLastSlotId(uint8_t slotId)
-{
-    lastSlotId = slotId;
-}
-
-uint8_t Droplet::getLastSlotId()
-{
-    return lastSlotId;
-}
-
-void Droplet::setInitialSlotId(uint8_t slotId)
-{
-    setLastSlotId(slotId);
-    initialSlotId = slotId;
-}
-
-uint8_t Droplet::getInitialSlotId()
-{
-    return initialSlotId;
-}
-
-Timer * Droplet::getTimer()
-{
-    return &timer;
 }
 
 /**
@@ -463,7 +229,7 @@ Timer * Droplet::getTimer()
   * @return DEVICE_OK on success, or DEVICE_NO_RESOURCES if a replacement receiver buffer
   *         could not be allocated (either by policy or memory exhaustion).
  */
-int Droplet::queueRxBuf()
+int Mesh::queueRxBuf()
 {
     if (rxBuf == NULL)
         return DEVICE_INVALID_PARAMETER;
@@ -475,7 +241,7 @@ int Droplet::queueRxBuf()
     rxBuf->rssi = getRSSI();
 
     // Ensure that a replacement buffer is available before queuing.
-    DropletFrameBuffer *newRxBuf = new DropletFrameBuffer();
+    MeshFrameBuffer *newRxBuf = new MeshFrameBuffer();
 
     if (newRxBuf == NULL)
         return DEVICE_NO_RESOURCES;
@@ -489,7 +255,7 @@ int Droplet::queueRxBuf()
     }
     else
     {
-        DropletFrameBuffer *p = rxQueue;
+        MeshFrameBuffer *p = rxQueue;
         while (p->next != NULL)
             p = p->next;
 
@@ -514,7 +280,7 @@ int Droplet::queueRxBuf()
   *
   * @note should only be called from RADIO_IRQHandler...
  */
-int Droplet::setRSSI(int rssi)
+int Mesh::setRSSI(int rssi)
 {
     if (!(status & MICROBIT_RADIO_STATUS_INITIALISED))
         return DEVICE_NOT_SUPPORTED;
@@ -531,7 +297,7 @@ int Droplet::setRSSI(int rssi)
   *
   * @return the most recent RSSI value or DEVICE_NOT_SUPPORTED if the BLE stack is running.
  */
-int Droplet::getRSSI()
+int Mesh::getRSSI()
 {
     if (!(status & MICROBIT_RADIO_STATUS_INITIALISED))
         return DEVICE_NOT_SUPPORTED;
@@ -544,7 +310,7 @@ int Droplet::getRSSI()
   *
   * @return DEVICE_OK on success, DEVICE_NOT_SUPPORTED if the BLE stack is running.
  */
-int Droplet::enable()
+int Mesh::enable()
 {
     // If the device is already initialised, then there's nothing to do.
     if (status & MICROBIT_RADIO_STATUS_INITIALISED)
@@ -556,7 +322,7 @@ int Droplet::enable()
 
     // If this is the first time we've been enable, allocate out receive buffers.
     if (rxBuf == NULL)
-        rxBuf = new DropletFrameBuffer();
+        rxBuf = new MeshFrameBuffer();
 
     if (rxBuf == NULL)
         return DEVICE_NO_RESOURCES;
@@ -594,7 +360,7 @@ int Droplet::enable()
     // and reception of data, also contains a LENGTH field, two optional additional 1 byte fields (S0 and S1) and a CRC calculation.
     // Configure the packet format for a simple 8 bit length field and no additional fields.
     NRF_RADIO->PCNF0 = 0x00000008;
-    NRF_RADIO->PCNF1 = 0x02040000 | MICROBIT_DROPLET_MAX_PACKET_SIZE;
+    NRF_RADIO->PCNF1 = 0x02040000 | MICROBIT_MESH_MAX_PACKET_SIZE;
 
     // Most communication channels contain some form of checksum - a mathematical calculation taken based on all the data
     // in a packet, that is also sent as part of the packet. When received, this calculation can be repeated, and the results
@@ -633,9 +399,6 @@ int Droplet::enable()
     // Done. Record that our RADIO is configured.
     status |= MICROBIT_RADIO_STATUS_INITIALISED;
 
-    this->timer.eventAfter(2000, DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT);
-    uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT, onInitialiseEvent);
-
     return DEVICE_OK;
 }
 
@@ -644,7 +407,7 @@ int Droplet::enable()
   *
   * @return DEVICE_OK on success, DEVICE_NOT_SUPPORTED if the BLE stack is running.
  */
-int Droplet::disable()
+int Mesh::disable()
 {
     // Only attempt to enable.disable the radio if the protocol is alreayd running.
     if (ble_running())
@@ -676,7 +439,7 @@ int Droplet::disable()
   *
   * @return DEVICE_OK on success, or DEVICE_NOT_SUPPORTED if the BLE stack is running.
  */
-int Droplet::setGroup(uint8_t group)
+int Mesh::setGroup(uint8_t group)
 {
     if (ble_running())
         return DEVICE_NOT_SUPPORTED;
@@ -690,38 +453,16 @@ int Droplet::setGroup(uint8_t group)
     return DEVICE_OK;
 }
 
-void codal::Droplet::protocolDatagram(DropletFrameBuffer *buffer) 
-{
-    uint32_t result = DropletScheduler::instance->analysePacket(buffer);
-
-    if (result == MICROBIT_OK)
-        datagram.packetReceived();
-    else
-        DMESG("Analysis packet not OK");
-
-    // TODO: ttl--;
-    // TODO: send packet here instead of in packet received
-    // TODO: rename sendImmediate to send txBuffer
-    // TODO: create a new method called sendImmediate
-    // TODO: this method should work like the old send
-    buffer->ttl--;
-
-    DMESG("ttl: %d", buffer->ttl);
-
-    if (buffer->ttl > 0)
-        sendImmediate(buffer);
-}
-
 /**
   * A background, low priority callback that is triggered whenever the processor is idle.
   * Here, we empty our queue of received packets, and pass them onto higher level protocol handlers.
  */
-void Droplet::idleCallback()
+void Mesh::idleCallback()
 {
     // Walk the list of packets and process each one.
     while(rxQueue)
     {
-        DropletFrameBuffer *p = rxQueue;
+        MeshFrameBuffer *p = rxQueue;
 
         // TODO: Analyse packet here
         // If we get a duplicate packet, forward it on but do not process it
@@ -729,7 +470,7 @@ void Droplet::idleCallback()
         switch (p->protocol)
         {
             case MICROBIT_RADIO_PROTOCOL_DATAGRAM:
-                protocolDatagram(p);
+                datagram.packetReceived();
                 break;
             case MICROBIT_RADIO_PROTOCOL_EVENTBUS:
                 event.packetReceived();
@@ -754,7 +495,7 @@ void Droplet::idleCallback()
   *
   * @return The number of packets in the receive buffer.
  */
-int Droplet::dataReady()
+int Mesh::dataReady()
 {
     return queueDepth;
 }
@@ -769,9 +510,9 @@ int Droplet::dataReady()
   * @note Once recv() has been called, it is the callers responsibility to
   *       delete the buffer when appropriate.
  */
-DropletFrameBuffer* Droplet::recv()
+MeshFrameBuffer* Mesh::recv()
 {
-    DropletFrameBuffer *p = rxQueue;
+    MeshFrameBuffer *p = rxQueue;
 
     if (p)
     {
@@ -796,13 +537,7 @@ DropletFrameBuffer* Droplet::recv()
   *
   * @return DEVICE_OK on success, or DEVICE_NOT_SUPPORTED if the BLE stack is running.
  */
-int Droplet::send(DropletFrameBuffer *buffer)
-{
-    txBuf = buffer;
-    return MICROBIT_OK;
-}
-
-int codal::Droplet::sendImmediate(DropletFrameBuffer *buffer)
+int codal::Mesh::send(MeshFrameBuffer *buffer)
 {
     if (ble_running())
         return DEVICE_NOT_SUPPORTED;
@@ -810,7 +545,7 @@ int codal::Droplet::sendImmediate(DropletFrameBuffer *buffer)
     if (buffer == NULL)
         return DEVICE_INVALID_PARAMETER;
 
-    if (buffer->length > MICROBIT_DROPLET_MAX_PACKET_SIZE + MICROBIT_DROPLET_HEADER_SIZE - 1)
+    if (buffer->length > MICROBIT_MESH_MAX_PACKET_SIZE + MICROBIT_MESH_HEADER_SIZE - 1)
         return DEVICE_INVALID_PARAMETER;
 
     // Firstly, disable the Radio interrupt. We want to wait until the trasmission completes.
@@ -857,49 +592,10 @@ int codal::Droplet::sendImmediate(DropletFrameBuffer *buffer)
     return DEVICE_OK;
 }
 
-int codal::Droplet::sendTx()
-{
-    if (txBuf == NULL)
-    {
-        if (keepSlotAlive)
-        {
-            txBuf = new DropletFrameBuffer();
-            txBuf->length = MICROBIT_DROPLET_HEADER_SIZE - 1;
-            txBuf->flags |= MICROBIT_DROPLET_KEEP_ALIVE;
-            txBuf->slotId = DropletScheduler::instance->getCurrentSlot();
-            txBuf->deviceId = uBit.getSerialNumber();
-            txBuf->protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
-            txBuf->initialTtl = MICROBIT_DROPLET_INITIAL_TTL;
-            txBuf->ttl = MICROBIT_DROPLET_INITIAL_TTL;
-            txBuf->startTime = uBit.systemTime();        
-        }
-        else
-        {
-            return DEVICE_INVALID_PARAMETER;
-        }
-    }
-
-    int result = sendImmediate(txBuf);
-
-    txBuf = NULL;
-
-    return result;
-}
-
-void codal::Droplet::setKeepAlive(bool alive) 
-{  
-    keepSlotAlive = alive;
-}
-
-bool codal::Droplet::getKeepAlive() const 
-{
-    return keepSlotAlive;
-}
-
 /**
  * Puts the component in (or out of) sleep (low power) mode.
  */
-int Droplet::setSleep(bool doSleep)
+int Mesh::setSleep(bool doSleep)
 {
     if (ble_running())
         return DEVICE_NOT_SUPPORTED;
@@ -932,8 +628,4 @@ int Droplet::setSleep(bool doSleep)
     }
 
     return DEVICE_OK;
-}
-bool Droplet::isEnabled() const
-{
-    return (status & MICROBIT_RADIO_STATUS_INITIALISED) == MICROBIT_RADIO_STATUS_INITIALISED;
 }

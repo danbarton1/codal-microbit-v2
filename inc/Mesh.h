@@ -23,23 +23,23 @@ Copyright (c) 2016 British Broadcasting Corporation.
         DEALINGS IN THE SOFTWARE.
             */
 
-#ifndef MICROBIT_DROPLET_H
-#define MICROBIT_DROPLET_H
+#ifndef MICROBIT_MESH_H
+#define MICROBIT_MESH_H
 
 namespace codal
 {
-    class Droplet;
-    struct DropletFrameBuffer;
+    class Mesh;
+    struct MeshFrameBuffer;
 }
 
 #include "CodalConfig.h"
 #include "codal-core/inc/types/Event.h"
 #include "PacketBuffer.h"
-#include "DropletDatagram.h"
-#include "DropletEvent.h"
+#include "MeshDatagram.h"
+#include "MeshEvent.h"
 #include "Timer.h"
-#include "DropletNetworkClock.h"
-#include "DropletScheduler.h"
+#include "MeshNetworkClock.h"
+#include "MeshScheduler.h"
 
 /**
  * Provides a simple broadcast radio abstraction, built upon the raw nrf51822 RADIO module.
@@ -84,27 +84,27 @@ namespace codal
 // Events
 #define MICROBIT_RADIO_EVT_DATAGRAM             1       // Event to signal that a new datagram has been received.
 
-#define MICROBIT_DROPLET_MAX_PACKET_SIZE        100
-#define MICROBIT_DROPLET_HEADER_SIZE            21
+#define MICROBIT_MESH_MAX_PACKET_SIZE        100
+#define MICROBIT_MESH_HEADER_SIZE            21
 
-#define MICROBIT_DROPLET_ADVERT 1 
-#define MICROBIT_DROPLET_KEEP_ALIVE 2
-#define MICROBIT_DROPLET_DONE 4
-#define MICROBIT_DROPLET_FREE 8
-#define MICROBIT_DROPLET_ERROR 16
+#define MICROBIT_MESH_ADVERT 1 
+#define MICROBIT_MESH_KEEP_ALIVE 2
+#define MICROBIT_MESH_DONE 4
+#define MICROBIT_MESH_FREE 8
+#define MICROBIT_MESH_ERROR 16
 
-#define MICROBIT_DROPLET_INITIAL_TTL 5
-#define MICROBIT_DROPLET_INITIALISATION_TTL 2
-#define MICROBIT_DROPLET_ADVERTISEMENT_TTL 5
+#define MICROBIT_MESH_INITIAL_TTL 5
+#define MICROBIT_MESH_INITIALISATION_TTL 2
+#define MICROBIT_MESH_ADVERTISEMENT_TTL 5
 
-#define MICROBIT_DROPLET_INITIALISATION_EVENT 100
-#define MICROBIT_DROPLET_SCHEDULE_EVENT 101
-#define MICROBIT_DROPLET_WAKE_UP_EVENT 102
-#define MICROBIT_DROPLET_EXPIRATION_EVENT 103
+#define MICROBIT_MESH_INITIALISATION_EVENT 100
+#define MICROBIT_MESH_SCHEDULE_EVENT 101
+#define MICROBIT_MESH_WAKE_UP_EVENT 102
+#define MICROBIT_MESH_EXPIRATION_EVENT 103
 
 namespace codal
 {
-    struct DropletFrameBuffer
+    struct MeshFrameBuffer
     {
         uint8_t length;                             // The length of the remaining bytes in the packet. includes protocol/version/group fields, excluding the length field itself.
         uint8_t slotId;
@@ -114,17 +114,17 @@ namespace codal
         uint64_t deviceId;
         unsigned long startTime;
 
-        uint8_t payload[MICROBIT_DROPLET_MAX_PACKET_SIZE];    // User / higher layer protocol data
-        DropletFrameBuffer *next;                              // Linkage, to allow this and other protocols to queue packets pending processing.
+        uint8_t payload[MICROBIT_MESH_MAX_PACKET_SIZE];    // User / higher layer protocol data
+        MeshFrameBuffer *next;                              // Linkage, to allow this and other protocols to queue packets pending processing.
         int rssi;                               // Received signal strength of this frame.
 
-        DropletFrameBuffer() : ttl(MICROBIT_DROPLET_INITIAL_TTL), initialTtl(MICROBIT_DROPLET_INITIAL_TTL)
+        MeshFrameBuffer() : ttl(MICROBIT_MESH_INITIAL_TTL), initialTtl(MICROBIT_MESH_INITIAL_TTL)
         {
 
         }
     };
 
-    enum DropletStatus
+    enum MeshStatus
     {
         Initialisation,
         Discovery,
@@ -132,26 +132,19 @@ namespace codal
         Listen
     };
     
-    class Droplet : public CodalComponent
+    class Mesh : public CodalComponent
     {
         uint8_t                 group;      // The radio group to which this micro:bit belongs.
         uint8_t                 queueDepth; // The number of packets in the receiver queue.
         int                     rssi;
-        DropletFrameBuffer      *rxQueue;   // A linear list of incoming packets, queued awaiting processing.
-        DropletFrameBuffer      *rxBuf;     // A pointer to the buffer being actively used by the RADIO hardware.
-        DropletFrameBuffer      *txBuf;    
-        DropletStatus           dropletStatus;
-        Timer                   &timer;
-        uint8_t                 lastSlotId;
-        uint8_t                 initialSlotId;
-        bool keepSlotAlive;
-        void protocolDatagram(DropletFrameBuffer *buffer);
+        MeshFrameBuffer      *rxQueue;   // A linear list of incoming packets, queued awaiting processing.
+        MeshFrameBuffer      *rxBuf;     // A pointer to the buffer being actively used by the RADIO hardware.
+        Timer &timer;
     public:
-        DropletDatagram   datagram;   // A simple datagram service.
-        DropletEvent      event;      // A simple event handling service.
-        DropletNetworkClock clock;    // A distributed network clock
-        DropletScheduler scheduler;   // A simple scheduler, should used along side the clock for synchronised results
-        static Droplet    *instance;  // A singleton reference, used purely by the interrupt service routine.
+        MeshDatagram   datagram;   // A simple datagram service.
+        MeshEvent      event;      // A simple event handling service.
+        MeshScheduler scheduler;   // A simple scheduler, should used along side the clock for synchronised results
+        static Mesh    *instance;  // A singleton reference, used purely by the interrupt service routine.
         
 
         /**
@@ -162,21 +155,7 @@ namespace codal
              * @note This class is demand activated, as a result most resources are only
              *       committed if send/recv or event registrations calls are made.
          */
-        Droplet(Timer &timer, uint16_t id = DEVICE_ID_RADIO);
-
-        /**
-             * 
-         */ 
-        bool checkSlotWindow(uint8_t slotId);
-
-        /**
-             * Change the ttl of the radio packets
-             *
-             * @param ttl A non negative value, shouldn't exceed the size of the network
-             *
-             * @return MICROBIT_OK on success
-         */
-        int setTimeToLive(uint8_t ttl);
+        Mesh(Timer &timer, uint16_t id = DEVICE_ID_RADIO);
 
         /**
              * Change the output power level of the transmitter to the given value.
@@ -203,7 +182,7 @@ namespace codal
              *
              * @return a pointer to the current receive buffer.
          */
-        DropletFrameBuffer * getRxBuf();
+        MeshFrameBuffer * getRxBuf();
 
         /**
              * Attempt to queue a buffer received by the radio hardware, if sufficient space is available.
@@ -236,24 +215,7 @@ namespace codal
         /**
              * @return The status of the local protocol
          */
-        DropletStatus getDropletStatus();
-
-        /**
-             * @param The new status
-         */
-        void setDropletStatus(DropletStatus status);
-
-        void setLastSlotId(uint8_t slotId);
-
-        void setInitialSlotId(uint8_t slotId);
-
-        uint8_t getLastSlotId();
-
-        uint8_t getInitialSlotId();
-
-        Timer * getTimer();
-
-        bool isEnabled() const;
+        MeshStatus getMeshStatus();
 
         /**
              * Initialises the radio for use as a multipoint sender/receiver
@@ -301,29 +263,9 @@ namespace codal
              * @note Once recv() has been called, it is the callers responsibility to
              *       delete the buffer when appropriate.
          */
-        DropletFrameBuffer* recv();
+        MeshFrameBuffer* recv();
 
-        /**
-             * Adds the buffer to the queue
-             * The buffer will be sent once it 
-         */
-        int send(DropletFrameBuffer *buffer);
-
-        int sendTx();
-
-        void setKeepAlive(bool alive);
-
-        bool getKeepAlive() const;
-
-        /**
-         * Transmits the given buffer onto the broadcast radio.
-         * The call will wait until the transmission of the packet has completed before returning.
-         *
-         * @param data The packet contents to transmit.
-         *
-         * @return MICROBIT_OK on success, or MICROBIT_NOT_SUPPORTED if the BLE stack is running.
-         */
-        int sendImmediate(DropletFrameBuffer *buffer);
+        int send(MeshFrameBuffer *buffer);
 
         /**
               * Puts the component in (or out of) sleep (low power) mode.

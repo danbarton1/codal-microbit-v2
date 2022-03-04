@@ -23,11 +23,11 @@ Copyright (c) 2016 British Broadcasting Corporation.
         DEALINGS IN THE SOFTWARE.
             */
 
-#ifndef MICROBIT_DROPLET_EVENT_H
-#define MICROBIT_DROPLET_EVENT_H
+#ifndef MICROBIT_MESH_EVENT_H
+#define MICROBIT_MESH_EVENT_H
 
 #include "codal-core/inc/types/Event.h"
-#include "Droplet.h"
+#include "Mesh.h"
 
 namespace codal
 {
@@ -44,10 +44,10 @@ namespace codal
      * teaching aid to demonstrate how simple communications operates, and to provide a sandpit through which learning can take place.
      * For serious applications, BLE should be considered a substantially more secure alternative.
      */
-    class DropletEvent
+    class MeshEvent
     {
         bool suppressForwarding;     // A private flag used to prevent event forwarding loops.
-        Droplet &radio;                 // A reference to the underlying radio module to use.
+        Mesh &radio;                 // A reference to the underlying radio module to use.
 
     public:
 
@@ -59,7 +59,7 @@ namespace codal
          *
          * @param r The underlying radio module used to send and receive data.
          */
-        DropletEvent(Droplet &r);
+        MeshEvent(Mesh &r);
 
         /**
          * Associates the given event with the radio channel.

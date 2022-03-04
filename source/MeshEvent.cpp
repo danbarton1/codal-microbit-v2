@@ -23,7 +23,7 @@ Copyright (c) 2016 British Broadcasting Corporation.
         DEALINGS IN THE SOFTWARE.
             */
 
-#include "Droplet.h"
+#include "Mesh.h"
 
 using namespace codal;
 
@@ -49,7 +49,7 @@ using namespace codal;
   *
   * @param r The underlying radio module used to send and receive data.
  */
-DropletEvent::DropletEvent(Droplet &r) : radio(r)
+MeshEvent::MeshEvent(Mesh &r) : radio(r)
 {
     this->suppressForwarding = false;
 }
@@ -69,7 +69,7 @@ DropletEvent::DropletEvent(Droplet &r) : radio(r)
   * @note The wildcards DEVICE_ID_ANY and DEVICE_EVT_ANY can also be in place of the
   *       id and value fields.
  */
-int DropletEvent::listen(uint16_t id, uint16_t value)
+int MeshEvent::listen(uint16_t id, uint16_t value)
 {
     if (EventModel::defaultEventBus)
         return listen(id, value, *EventModel::defaultEventBus);
@@ -94,9 +94,9 @@ int DropletEvent::listen(uint16_t id, uint16_t value)
   * @note The wildcards DEVICE_ID_ANY and DEVICE_EVT_ANY can also be in place of the
   *       id and value fields.
  */
-int DropletEvent::listen(uint16_t id, uint16_t value, EventModel &eventBus)
+int MeshEvent::listen(uint16_t id, uint16_t value, EventModel &eventBus)
 {
-    return eventBus.listen(id, value, this, &DropletEvent::eventReceived, MESSAGE_BUS_LISTENER_IMMEDIATE);
+    return eventBus.listen(id, value, this, &MeshEvent::eventReceived, MESSAGE_BUS_LISTENER_IMMEDIATE);
 }
 
 /**
@@ -110,7 +110,7 @@ int DropletEvent::listen(uint16_t id, uint16_t value, EventModel &eventBus)
   *
   * @note DEVICE_EVT_ANY can be used to deregister all event values matching the given id.
  */
-int DropletEvent::ignore(uint16_t id, uint16_t value)
+int MeshEvent::ignore(uint16_t id, uint16_t value)
 {
     if (EventModel::defaultEventBus)
         return ignore(id, value, *EventModel::defaultEventBus);
@@ -131,9 +131,9 @@ int DropletEvent::ignore(uint16_t id, uint16_t value)
   *
   * @note DEVICE_EVT_ANY can be used to deregister all event values matching the given id.
  */
-int DropletEvent::ignore(uint16_t id, uint16_t value, EventModel &eventBus)
+int MeshEvent::ignore(uint16_t id, uint16_t value, EventModel &eventBus)
 {
-    return eventBus.ignore(id, value, this, &DropletEvent::eventReceived);
+    return eventBus.ignore(id, value, this, &MeshEvent::eventReceived);
 }
 
 
@@ -142,9 +142,9 @@ int DropletEvent::ignore(uint16_t id, uint16_t value, EventModel &eventBus)
   *
   * This function process this packet, and fires the event contained inside onto the default EventModel.
  */
-void DropletEvent::packetReceived()
+void MeshEvent::packetReceived()
 {
-    DropletFrameBuffer *p = radio.recv();
+    MeshFrameBuffer *p = radio.recv();
     Event *e = (Event *) p->payload;
 
     suppressForwarding = true;
@@ -159,14 +159,14 @@ void DropletEvent::packetReceived()
   * the registerEvent() method described above. Upon receiving such an event, it is wrapped into
   * a radio packet and transmitted to any other micro:bits in the same group.
  */
-void DropletEvent::eventReceived(Event e)
+void MeshEvent::eventReceived(Event e)
 {
     if(suppressForwarding)
         return;
 
-    DropletFrameBuffer buf;
+    MeshFrameBuffer buf;
 
-    buf.length = sizeof(Event) + MICROBIT_DROPLET_HEADER_SIZE - 1;
+    buf.length = sizeof(Event) + MICROBIT_MESH_HEADER_SIZE - 1;
     buf.protocol = MICROBIT_RADIO_PROTOCOL_EVENTBUS;
     memcpy(buf.payload, (const uint8_t *)&e, sizeof(Event));
 
