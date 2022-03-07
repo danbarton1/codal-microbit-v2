@@ -262,6 +262,8 @@ namespace codal
          */
         int enable();
 
+        int enableRadio();
+
         /**
              * Disables the radio for use as a multipoint sender/receiver.
              *

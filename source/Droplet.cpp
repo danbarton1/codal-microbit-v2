@@ -105,10 +105,11 @@ void printState(int s)
 
 void onInitialiseEvent(MicroBitEvent e)
 {
-
+    DMESG("onInitEvent");
     if (Droplet::instance->getDropletStatus() != DropletStatus::Initialisation)
     {
-        DMESG("Initialiation complete");
+        DMESG("Initialisation complete");
+        DropletScheduler::instance->queueAdvertisement();
         return;
     }
     
@@ -190,9 +191,10 @@ extern "C" void RADIO_IRQHandler(void)
         NRF_RADIO->TASKS_START = 1;
     }
 
-    /*
-    DropletFrameBuffer *buffer = Droplet::instance->getRxBuf();
+    /*DropletFrameBuffer *buffer = Droplet::instance->getRxBuf();
     buffer->ttl--;
+
+    DMESG("RadioIRQ buffer->ttl: %d initialttl: %d", buffer->ttl, buffer->initialTtl);
 
     if (buffer->ttl <= 0)
     {
@@ -218,7 +220,10 @@ extern "C" void RADIO_IRQHandler(void)
 
     NRF_RADIO->EVENTS_READY = 0;
     NRF_RADIO->TASKS_RXEN = 1;
-    while(NRF_RADIO->EVENTS_READY == 0); // RXIDLE */
+    while(NRF_RADIO->EVENTS_READY == 0); // RXIDLE 
+
+    NRF_RADIO->EVENTS_END = 0;
+    NRF_RADIO->TASKS_START = 1; */
 
         /*
     printState(NRF_RADIO->STATE);
@@ -353,7 +358,7 @@ Droplet::Droplet(Timer &timer, uint16_t id) : timer(timer), datagram(*this), eve
     this->rxQueue = nullptr;
     this->rxBuf = nullptr;
     this->dropletStatus = DropletStatus::Initialisation;
-    this->keepSlotAlive = false;
+    this->keepSlotAlive = true;
 
     instance = this;
 
@@ -546,6 +551,17 @@ int Droplet::getRSSI()
  */
 int Droplet::enable()
 {
+    enableRadio();
+
+    //this->timer.eventAfter(2000, DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT);
+    system_timer_event_after(2000, DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT);
+    uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT, onInitialiseEvent);
+
+    return DEVICE_OK;
+}
+
+int Droplet::enableRadio()
+{
     // If the device is already initialised, then there's nothing to do.
     if (status & MICROBIT_RADIO_STATUS_INITIALISED)
         return DEVICE_OK;
@@ -632,9 +648,6 @@ int Droplet::enable()
 
     // Done. Record that our RADIO is configured.
     status |= MICROBIT_RADIO_STATUS_INITIALISED;
-
-    this->timer.eventAfter(2000, DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT);
-    uBit.messageBus.listen(DEVICE_ID_RADIO, MICROBIT_DROPLET_INITIALISATION_EVENT, onInitialiseEvent);
 
     return DEVICE_OK;
 }

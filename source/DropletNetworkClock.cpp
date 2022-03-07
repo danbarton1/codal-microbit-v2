@@ -113,6 +113,9 @@ void codal::DropletNetworkClock::updateNetworkTime(uint32_t time)
     setNetworkTime(adjustedTime);
 }
 
+/*
+ * Gets the predicted network time in microseconds
+*/
 uint32_t codal::DropletNetworkClock::getPredictedNetworkTime()
 {
     uint32_t deltaLocalTime = system_timer_current_time_us() - localStartTime;
