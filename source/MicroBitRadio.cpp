@@ -59,21 +59,63 @@ const uint8_t MICROBIT_RADIO_POWER_LEVEL[] = {0xD8, 0xD8, 0xEC, 0xF0, 0xF4, 0xF8
 
 MicroBitRadio* MicroBitRadio::instance = NULL;
 
+void printState()
+{
+    switch (NRF_RADIO->STATE)
+    {
+        case 0:
+            DMESG("State: Disabled");
+            break;
+        case 1:
+            DMESG("State: RXRU");
+            break;
+        case 2:
+            DMESG("State: RXIDLE");
+            break;
+        case 3:
+            DMESG("State: RX");
+            break;
+        case 4:
+            DMESG("State: RXDISABLE");
+            break;
+        case 9:
+            DMESG("State: TXRU");
+            break;
+        case 10:
+            DMESG("State: TXIDLE");
+            break;
+        case 11:
+            DMESG("State: TX");
+            break;
+        case 12:
+            DMESG("State: TXDISABLE");
+            break;
+    }
+}
+
+
+uint8_t send = 0;
+
 extern "C" void RADIO_IRQHandler(void)
 {
+    DMESG("START");
+    //printState();
     if(NRF_RADIO->EVENTS_READY)
     {
         NRF_RADIO->EVENTS_READY = 0;
 
         // Start listening and wait for the END event
         NRF_RADIO->TASKS_START = 1;
+        //printState();
     }
 
     if(NRF_RADIO->EVENTS_END)
     {
+        //printState();
         NRF_RADIO->EVENTS_END = 0;
         if(NRF_RADIO->CRCSTATUS == 1)
         {
+            //printState();
             int sample = (int)NRF_RADIO->RSSISAMPLE;
 
             // Associate this packet's rssi value with the data just
@@ -82,10 +124,26 @@ extern "C" void RADIO_IRQHandler(void)
 
             // Now move on to the next buffer, if possible.
             // The queued packet will get the rssi value set above.
-            MicroBitRadio::instance->queueRxBuf();
+            int queueRxBufReturn = MicroBitRadio::instance->queueRxBuf();
+
+            if (queueRxBufReturn == DEVICE_INVALID_PARAMETER)
+            {
+                DMESG("Buffer was null");
+            }
+            else if (queueRxBufReturn == DEVICE_NO_RESOURCES)
+            {
+                DMESG("No memory available");
+            }
+            else
+            {
+                // DMESG("OK");
+            }
+
+            //printState();
 
             // Set the new buffer for DMA
             NRF_RADIO->PACKETPTR = (uint32_t) MicroBitRadio::instance->getRxBuf();
+            //printState();
         }
         else
         {
@@ -94,7 +152,64 @@ extern "C" void RADIO_IRQHandler(void)
 
         // Start listening and wait for the END event
         NRF_RADIO->TASKS_START = 1;
+        //printState();
     }
+
+    
+    FrameBuffer *buffer = MicroBitRadio::instance->getRxBuf();
+
+    DMESG("before ttl-- ttl: %d initial ttl: %d", buffer->ttl, buffer->initTtl);
+
+    buffer->ttl--;
+
+    if (buffer->ttl == 0)
+        return;
+
+    DMESG("after ttl-- ttl: %d initial ttl: %d", buffer->ttl, buffer->initTtl);
+
+    send++;
+    //FrameBuffer *buffer = new FrameBuffer();
+    //buffer->length = MICROBIT_RADIO_HEADER_SIZE - 1;
+    //buffer->protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
+
+    DMESG("Transmitting... Number of packets sent: %d", send);
+
+    // RX -> RXIDLE -> TXRU
+
+    //printState(); // RX
+    NRF_RADIO->TASKS_STOP = 1;
+    //printState(); // RXIDLE
+
+    buffer->protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
+    NRF_RADIO->PACKETPTR = (uint32_t)buffer;
+
+   // Turn on the transmitter, and wait for it to signal that it's ready to use.
+    NRF_RADIO->EVENTS_READY = 0;
+    NRF_RADIO->TASKS_TXEN = 1;
+    while (NRF_RADIO->EVENTS_READY == 0);
+
+    // Start transmission and wait for end of packet.
+    NRF_RADIO->TASKS_START = 1;
+    NRF_RADIO->EVENTS_END = 0;
+    while(NRF_RADIO->EVENTS_END == 0);
+
+    // Return the radio to using the default receive buffer
+    NRF_RADIO->PACKETPTR = (uint32_t) MicroBitRadio::instance->getRxBuf();
+
+    // Turn off the transmitter.
+    NRF_RADIO->EVENTS_DISABLED = 0;
+    NRF_RADIO->TASKS_DISABLE = 1;
+    while(NRF_RADIO->EVENTS_DISABLED == 0);
+
+    // Start listening for the next packet
+    NRF_RADIO->EVENTS_READY = 0;
+    NRF_RADIO->TASKS_RXEN = 1;
+    while(NRF_RADIO->EVENTS_READY == 0);
+
+    NRF_RADIO->EVENTS_END = 0;
+    NRF_RADIO->TASKS_START = 1;
+
+    DMESG("END"); 
 }
 
 /**
@@ -175,6 +290,7 @@ FrameBuffer* MicroBitRadio::getRxBuf()
   */
 int MicroBitRadio::queueRxBuf()
 {
+    // DMESG("queueRxBuf");
     if (rxBuf == NULL)
         return DEVICE_INVALID_PARAMETER;
 
@@ -407,6 +523,8 @@ void MicroBitRadio::idleCallback()
     while(rxQueue)
     {
         FrameBuffer *p = rxQueue;
+
+        DMESG("idleCallback packet - protocol: %d", p->protocol);
 
         switch (p->protocol)
         {

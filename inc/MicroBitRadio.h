@@ -72,7 +72,7 @@ namespace codal
 #define MICROBIT_RADIO_DEFAULT_TX_POWER         7
 #define MICROBIT_RADIO_DEFAULT_FREQUENCY        7
 #define MICROBIT_RADIO_MAX_PACKET_SIZE          32
-#define MICROBIT_RADIO_HEADER_SIZE              4
+#define MICROBIT_RADIO_HEADER_SIZE              6
 #define MICROBIT_RADIO_MAXIMUM_RX_BUFFERS       4
 #define MICROBIT_RADIO_POWER_LEVELS             10
 
@@ -91,10 +91,18 @@ namespace codal
         uint8_t         version;                            // Protocol version code.
         uint8_t         group;                              // ID of the group to which this packet belongs.
         uint8_t         protocol;                           // Inner protocol number c.f. those issued by IANA for IP protocols
+        uint8_t ttl;
+        uint8_t initTtl;
 
         uint8_t         payload[MICROBIT_RADIO_MAX_PACKET_SIZE];    // User / higher layer protocol data
         FrameBuffer     *next;                              // Linkage, to allow this and other protocols to queue packets pending processing.
         int             rssi;                               // Received signal strength of this frame.
+
+        FrameBuffer()
+        {
+            ttl = 2;
+            initTtl = 2;
+        }
     };
 
 
